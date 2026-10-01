@@ -544,3 +544,81 @@ td textarea {
     min-width: 0;
   }
 }
+
+/* 在线更新卡片样式 */
+.update-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #fdfaf6;
+  border: 1px solid #e7d8c5;
+  border-left: 4px solid #8d3a2a;
+  border-radius: 8px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.update-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.update-badge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  color: #475569;
+  white-space: nowrap;
+}
+
+.update-badge.active {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.update-badge.success {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.update-badge.pending {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.update-badge.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.update-texts strong {
+  display: block;
+  font-size: 15px;
+  color: #2c251f;
+  margin-bottom: 2px;
+}
+
+.update-texts p {
+  margin: 0;
+  font-size: 13px;
+  color: #647066;
+}
+
+.update-card-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.update-card-actions button {
+  padding: 7px 15px;
+  font-size: 13px;
+}
+

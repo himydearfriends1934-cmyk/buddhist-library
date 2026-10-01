@@ -2,6 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { exec } = require("child_process");
 
 const root = __dirname;
 const publicDir = path.join(root, "public");
@@ -460,7 +461,81 @@ async function handleApi(req, res) {
     return send(res, 200, JSON.stringify({ ok: true }));
   }
 
+  // 检查版本更新接口
+  if (req.method === "GET" && url.pathname === "/api/admin/check-update") {
+    const headResult = await runGitCommand('git log -1 --format="%h%x09%ci%x09%s"');
+    if (!headResult.ok) {
+      return send(res, 200, JSON.stringify({
+        ok: true,
+        isGit: false,
+        message: "当前目录未检测到 Git 版本库或没有安装 Git，无法自动拉取更新。"
+      }));
+    }
+
+    const [currentHash, commitDate, commitSubject] = (headResult.stdout || "").split("\t");
+
+    const fetchResult = await runGitCommand("git fetch origin main");
+    if (!fetchResult.ok) {
+      return send(res, 200, JSON.stringify({
+        ok: true,
+        isGit: true,
+        hasUpdate: false,
+        current: { hash: currentHash, date: commitDate, subject: commitSubject },
+        warning: "远程分支连接受限，暂无法比对远端版本",
+        message: `当前版本：${currentHash} (${commitSubject || "最新"})`
+      }));
+    }
+
+    const diffResult = await runGitCommand("git log HEAD..origin/main --oneline");
+    const hasUpdate = Boolean(diffResult.stdout);
+    const updates = hasUpdate ? diffResult.stdout.split("\n").filter(Boolean) : [];
+
+    return send(res, 200, JSON.stringify({
+      ok: true,
+      isGit: true,
+      hasUpdate,
+      current: { hash: currentHash, date: commitDate, subject: commitSubject },
+      updates,
+      message: hasUpdate ? `检测到 ${updates.length} 个新提交` : "当前已是最新版本"
+    }));
+  }
+
+  // 执行在线一键更新接口 (git pull origin main)
+  if (req.method === "POST" && url.pathname === "/api/admin/update") {
+    const pullResult = await runGitCommand("git pull origin main");
+    if (!pullResult.ok) {
+      return send(res, 500, JSON.stringify({
+        ok: false,
+        message: `更新失败: ${pullResult.stderr || pullResult.error || "合并冲突或网络超时"}`
+      }));
+    }
+
+    const newHeadResult = await runGitCommand('git log -1 --format="%h%x09%ci%x09%s"');
+    const [newHash, newDate, newSubject] = (newHeadResult.stdout || "").split("\t");
+
+    return send(res, 200, JSON.stringify({
+      ok: true,
+      message: "项目代码已成功更新至最新版本！",
+      details: pullResult.stdout,
+      current: { hash: newHash, date: newDate, subject: newSubject }
+    }));
+  }
+
   send(res, 404, JSON.stringify({ ok: false, message: "接口不存在" }));
+}
+
+function runGitCommand(cmd) {
+  return new Promise((resolve) => {
+    exec(cmd, { cwd: root, timeout: 45000 }, (error, stdout, stderr) => {
+      resolve({
+        ok: !error,
+        code: error ? error.code : 0,
+        stdout: (stdout || "").trim(),
+        stderr: (stderr || "").trim(),
+        error: error ? error.message : null
+      });
+    });
+  });
 }
 
 const server = http.createServer((req, res) => {

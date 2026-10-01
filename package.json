@@ -1,8 +1,12 @@
 {
   "name": "buddhist-library-site",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "install:app": "node scripts/install.js",
+    "update:app": "node scripts/install.js",
+    "uninstall:app": "node scripts/uninstall.js",
+    "uninstall:deps": "node scripts/uninstall-deps.js"
   }
 }

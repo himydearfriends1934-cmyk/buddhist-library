@@ -525,6 +525,103 @@ $("#saveBtn").addEventListener("click", async () => {
   showToast("已保存");
 });
 
+// ==================== 页面在线更新功能 ====================
+let updateState = { hasUpdate: false };
+
+async function checkUpdate(autoShow = true) {
+  const card = $("#updateCard");
+  const badge = $("#updateBadge");
+  const title = $("#updateStatusText");
+  const desc = $("#updateVersionInfo");
+  const startBtn = $("#startUpdateBtn");
+
+  if (!card) return;
+
+  if (autoShow) {
+    card.classList.remove("hidden");
+    badge.textContent = "检测中";
+    badge.className = "update-badge pending";
+    title.textContent = "正在检查 Git 仓库更新...";
+    desc.textContent = "正在连接远程仓库比对最新提交...";
+    startBtn.disabled = true;
+  }
+
+  try {
+    const res = await request("/api/admin/check-update");
+    if (!res.isGit) {
+      badge.textContent = "独立版";
+      badge.className = "update-badge";
+      title.textContent = res.message || "未检测到 Git 仓库";
+      desc.textContent = "建议从 GitHub 下载最新版本覆盖更新。";
+      startBtn.disabled = true;
+      return;
+    }
+
+    updateState = res;
+    const currentInfo = res.current ? `当前版本: ${res.current.hash} - ${res.current.subject}` : "";
+
+    if (res.hasUpdate) {
+      badge.textContent = "有更新";
+      badge.className = "update-badge active";
+      title.textContent = `发现新版本（共 ${res.updates.length} 个新提交）`;
+      desc.innerHTML = `${escapeHtml(currentInfo)}<br><span style="color:#b45309;">可点击“立即更新”直接拉取最新代码</span>`;
+      startBtn.disabled = false;
+      card.classList.remove("hidden");
+    } else {
+      badge.textContent = "最新";
+      badge.className = "update-badge success";
+      title.textContent = res.warning || "当前已是最新版本";
+      desc.textContent = currentInfo || "无需更新";
+      startBtn.disabled = true;
+      if (!autoShow) {
+        showToast("已是最新版本");
+      }
+    }
+  } catch (err) {
+    badge.textContent = "失败";
+    badge.className = "update-badge danger";
+    title.textContent = "检查更新失败";
+    desc.textContent = err.message;
+    startBtn.disabled = true;
+  }
+}
+
+async function doOnlineUpdate() {
+  const startBtn = $("#startUpdateBtn");
+  const title = $("#updateStatusText");
+  const desc = $("#updateVersionInfo");
+  const badge = $("#updateBadge");
+
+  startBtn.disabled = true;
+  badge.textContent = "更新中";
+  badge.className = "update-badge pending";
+  title.textContent = "正在执行更新 (git pull origin main)...";
+  desc.textContent = "正在拉取代码，请稍候...";
+
+  try {
+    const res = await request("/api/admin/update", { method: "POST", body: "{}" });
+    badge.textContent = "成功";
+    badge.className = "update-badge success";
+    title.textContent = "更新成功！";
+    desc.textContent = `最新版本: ${res.current?.hash || ""} - ${res.current?.subject || ""}。即将自动刷新页面...`;
+    showToast("项目更新成功，即将刷新");
+    setTimeout(() => location.reload(), 2500);
+  } catch (err) {
+    badge.textContent = "失败";
+    badge.className = "update-badge danger";
+    title.textContent = "更新失败";
+    desc.textContent = err.message;
+    startBtn.disabled = false;
+    showToast(`更新失败: ${err.message}`);
+  }
+}
+
+$("#checkUpdateBtn")?.addEventListener("click", () => checkUpdate(true));
+$("#startUpdateBtn")?.addEventListener("click", doOnlineUpdate);
+$("#dismissUpdateBtn")?.addEventListener("click", () => {
+  $("#updateCard")?.classList.add("hidden");
+});
+
 loadAdminData().then(() => {
   $("#loginBox").classList.add("hidden");
   $("#dashboard").classList.remove("hidden");
