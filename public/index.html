@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>佛学文化资料阅览</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="hero">
+      <div class="pine" aria-hidden="true"></div>
+      <div class="mist" aria-hidden="true"></div>
+      <div class="buddha-mark" aria-hidden="true">禅</div>
+      <h1 id="siteTitle">佛学文化资料阅览</h1>
+      <p id="siteSubtitle">经典经文、电子书籍与佛学文化学习资料</p>
+    </header>
+
+    <main class="shell">
+      <section class="panel">
+        <div class="section-title">
+          <span class="lotus-mini">莲</span>
+          <h2>重点经咒</h2>
+        </div>
+        <div class="important-grid" id="importantGrid"></div>
+      </section>
+
+      <section class="panel">
+        <div class="section-title">
+          <span class="lotus-mini">莲</span>
+          <h2>小咒</h2>
+        </div>
+        <div class="small-grid" id="smallGrid"></div>
+      </section>
+
+      <section class="two-columns">
+        <article class="panel">
+          <div class="section-title row-title">
+            <span class="lotus-mini">莲</span>
+            <h2>常用经书</h2>
+            <a class="more-link" href="/scriptures.html" aria-label="查看更多常用经书">更多 ›</a>
+          </div>
+          <div class="book-list compact" id="scripturePreview"></div>
+        </article>
+
+        <article class="panel">
+          <div class="section-title row-title">
+            <span class="lotus-mini">莲</span>
+            <h2>常用下载区</h2>
+            <a class="more-link" href="/scriptures.html#downloads">更多 ›</a>
+          </div>
+          <div class="download-list" id="downloadPreview"></div>
+        </article>
+      </section>
+
+      <section class="panel message-panel">
+        <div class="pagoda" aria-hidden="true"></div>
+        <div class="message-main">
+          <h2>改进/留言区</h2>
+          <form class="message-form" id="messageForm">
+            <input id="messageName" maxlength="24" placeholder="称呼">
+            <textarea id="messageContent" maxlength="300" rows="3" placeholder="留下改进建议或资料补充需求"></textarea>
+            <button type="submit">提交留言</button>
+          </form>
+        </div>
+        <div class="message-list" id="messageList"></div>
+        <div class="message-status" id="messageStatus"></div>
+      </section>
+    </main>
+
+    <a class="admin-entry" href="/admin.html" aria-label="进入后台管理">
+      <span>后台</span>
+    </a>
+
+    <script src="/site.js"></script>
+  </body>
+</html>

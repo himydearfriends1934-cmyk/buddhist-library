@@ -1,0 +1,8 @@
+.env
+.env.*
+!.env.example
+data/site-data.json
+public/uploads/*
+!public/uploads/.gitkeep
+node_modules/
+*.log

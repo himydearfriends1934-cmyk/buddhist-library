@@ -1,0 +1,546 @@
+:root {
+  --green: #135c3b;
+  --blue: #0a2f70;
+  --paper: #f8f1e5;
+  --line: #e4d3bd;
+  --ink: #1d2520;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+  background: linear-gradient(135deg, #f8f1e5, #fffaf1 52%, #eef5ef);
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+a,
+button {
+  -webkit-tap-highlight-color: rgba(19, 92, 59, 0.16);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease, background-color 0.12s ease;
+}
+
+a[href],
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+a[href]:hover,
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(19, 92, 59, 0.14);
+  filter: brightness(1.03);
+}
+
+a[href]:focus-visible,
+button:not(:disabled):focus-visible {
+  outline: 2px solid rgba(19, 92, 59, 0.42);
+  outline-offset: 2px;
+}
+
+a[href]:active,
+button:not(:disabled):active {
+  transform: translateY(1px) scale(0.98);
+  filter: brightness(0.94);
+}
+
+button,
+.header-actions a {
+  min-height: 38px;
+  border: 0;
+  border-radius: 6px;
+  padding: 8px 15px;
+  background: var(--green);
+  color: white;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+button.ghost {
+  background: white;
+  color: var(--green);
+  border: 1px solid rgba(19, 92, 59, 0.32);
+}
+
+button.secondary {
+  background: #f7fbf8;
+  color: var(--green);
+  border: 1px solid rgba(19, 92, 59, 0.28);
+}
+
+.admin-app {
+  width: min(1440px, calc(100% - 36px));
+  margin: 28px auto;
+}
+
+.login-card,
+.settings-card,
+.editor-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 250, 0.9);
+  box-shadow: 0 18px 45px rgba(79, 56, 31, 0.09);
+}
+
+.login-card {
+  width: min(420px, 100%);
+  margin: 120px auto 0;
+  padding: 28px;
+}
+
+.login-card h1 {
+  margin: 0 0 8px;
+  color: var(--blue);
+}
+
+.login-card p {
+  margin: 0 0 20px;
+  color: #637067;
+  line-height: 1.7;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 14px;
+  font-weight: 700;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  border: 1px solid #cdbfae;
+  border-radius: 6px;
+  padding: 9px 10px;
+  background: white;
+  color: var(--ink);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.message {
+  min-height: 24px;
+  margin-top: 12px;
+  color: #b83b2f;
+}
+
+.hidden {
+  display: none;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.admin-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.admin-header h1 {
+  margin: 0;
+  color: var(--blue);
+}
+
+.admin-header p {
+  margin: 7px 0 0;
+  color: #647066;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-card,
+.editor-card {
+  padding: 20px;
+}
+
+.settings-card h2,
+.editor-card h2 {
+  margin: 0;
+  color: var(--blue);
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.settings-grid .full {
+  grid-column: 1 / -1;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.tabs button {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--green);
+  border: 1px solid rgba(19, 92, 59, 0.28);
+  white-space: nowrap;
+}
+
+.tabs button.active {
+  background: var(--green);
+  color: white;
+}
+
+.upload-progress {
+  display: grid;
+  gap: 8px;
+  margin: -4px 0 16px;
+  border: 1px solid rgba(19, 92, 59, 0.18);
+  border-radius: 8px;
+  background: rgba(255, 255, 250, 0.86);
+  padding: 10px 12px;
+}
+
+.upload-progress.hidden {
+  display: none;
+}
+
+.upload-progress-text {
+  color: #435147;
+  font-size: 14px;
+}
+
+.upload-progress-track {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8eee9;
+}
+
+.upload-progress-bar {
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+  transition: width 0.18s ease;
+}
+
+.editor-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.editor-title > div:first-child {
+  margin-right: auto;
+}
+
+.editor-title p {
+  margin: 6px 0 0;
+  color: #647066;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid #eadccb;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  min-width: 920px;
+  border-collapse: collapse;
+  background: white;
+}
+
+.message-table {
+  min-width: 1040px;
+}
+
+th,
+td {
+  border-bottom: 1px solid #eee4d7;
+  padding: 9px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: #435147;
+  background: #fbf6ec;
+  font-size: 14px;
+}
+
+td input,
+td select,
+td textarea {
+  min-width: 110px;
+}
+
+td textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.message-content {
+  max-width: 320px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.row-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.file-picker {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.file-picker button {
+  min-height: 32px;
+  padding: 6px 10px;
+  background: #f7fbf8;
+  color: var(--green);
+  border: 1px solid rgba(19, 92, 59, 0.28);
+}
+
+.file-current {
+  max-width: 220px;
+  overflow: hidden;
+  color: #526157;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-current.muted {
+  color: #9b9185;
+}
+
+.row-actions button {
+  min-height: 34px;
+  padding: 6px 10px;
+}
+
+.row-actions .danger {
+  background: #b24337;
+}
+
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  min-width: 180px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: #173a2a;
+  color: white;
+  opacity: 0;
+  transform: translateY(12px);
+  transition: 0.2s ease;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (max-width: 760px) {
+  .admin-app {
+    width: min(100% - 20px, 1440px);
+    margin: 12px auto;
+  }
+
+  .login-card {
+    margin-top: 48px;
+    padding: 20px;
+  }
+
+  .admin-header,
+  .editor-title {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-header {
+    gap: 12px;
+  }
+
+  .admin-header h1 {
+    font-size: 26px;
+  }
+
+  .header-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .header-actions a,
+  .header-actions button,
+  .tabs button,
+  #addItemBtn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .settings-card,
+  .editor-card {
+    padding: 14px;
+  }
+
+  .settings-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .settings-grid .full {
+    grid-column: auto;
+  }
+
+  .tabs {
+    margin: 12px 0;
+    padding-bottom: 3px;
+    scroll-snap-type: x proximity;
+  }
+
+  .tabs button {
+    scroll-snap-align: start;
+  }
+
+  .editor-title {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .table-wrap {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+  }
+
+  table,
+  .message-table,
+  thead,
+  tbody,
+  tr,
+  td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  thead {
+    display: none;
+  }
+
+  tbody {
+    display: grid;
+    gap: 12px;
+  }
+
+  tr {
+    border: 1px solid #eadccb;
+    border-radius: 8px;
+    background: white;
+    padding: 10px;
+  }
+
+  td {
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: 8px;
+    align-items: center;
+    border-bottom: 1px dashed #eee4d7;
+    padding: 7px 0;
+  }
+
+  td:last-child {
+    border-bottom: 0;
+  }
+
+  #itemRows td:nth-child(1)::before { content: "标题"; }
+  #itemRows td:nth-child(2)::before { content: "副标题"; }
+  #itemRows td:nth-child(3)::before { content: "大小"; }
+  #itemRows td:nth-child(4)::before { content: "页数"; }
+  #itemRows td:nth-child(5)::before { content: "选择文件"; }
+  #itemRows td:nth-child(6)::before { content: "操作"; }
+  #messageRows td:nth-child(1)::before { content: "称呼"; }
+  #messageRows td:nth-child(2)::before { content: "留言"; }
+  #messageRows td:nth-child(3)::before { content: "回复"; }
+  #messageRows td:nth-child(4)::before { content: "时间"; }
+  #messageRows td:nth-child(5)::before { content: "操作"; }
+
+  td::before {
+    color: #526157;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  td input,
+  td select,
+  td textarea,
+  .file-picker {
+    min-width: 0;
+  }
+
+  .file-current,
+  .message-content {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .row-actions {
+    flex-wrap: wrap;
+  }
+
+  .row-actions button {
+    min-height: 40px;
+    flex: 1;
+  }
+
+  .toast {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    min-width: 0;
+  }
+}

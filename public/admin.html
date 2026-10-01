@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>后台管理 - 佛学文化资料阅览</title>
+    <link rel="stylesheet" href="/admin.css">
+  </head>
+  <body>
+    <main class="admin-app">
+      <section class="login-card" id="loginBox">
+        <h1>后台登录</h1>
+        <p>登录后可编辑重点经咒、小咒、常用经书、常用下载区。</p>
+        <label>账号<input id="username" autocomplete="username" value="admin"></label>
+        <label>密码<input id="password" type="password" autocomplete="current-password" value="123456"></label>
+        <button id="loginBtn">登录</button>
+        <div class="message" id="loginMessage"></div>
+      </section>
+
+      <section class="dashboard hidden" id="dashboard">
+        <header class="admin-header">
+          <div>
+            <h1>内容管理后台</h1>
+            <p>修改后点击“保存全部”，前台首页和常用经书页会同步更新。</p>
+          </div>
+          <div class="header-actions">
+            <a href="/" target="_blank">查看前台</a>
+            <a href="/library-admin.html" target="_blank">资料库编辑</a>
+            <button id="saveBtn">保存全部</button>
+            <button class="ghost" id="logoutBtn">退出</button>
+          </div>
+        </header>
+
+        <section class="settings-card">
+          <h2>网站文字</h2>
+          <div class="settings-grid">
+            <label>网站标题<input id="settingTitle"></label>
+            <label>副标题<input id="settingSubtitle"></label>
+            <label class="full">平台说明<textarea id="settingNotice" rows="3"></textarea></label>
+          </div>
+        </section>
+
+        <nav class="tabs" id="tabs">
+          <button class="active" data-section="important">重点经咒</button>
+          <button data-section="smallMantras">小咒</button>
+          <button data-section="scriptures">常用经书</button>
+          <button data-section="downloads">常用下载区</button>
+          <button data-section="messages">留言管理</button>
+          <button class="secondary" id="bulkUploadBtn" type="button" title="PDF 自动进常用经书，RAR 等压缩包自动进资料下载包">资料库批量上传</button>
+          <input class="hidden-file-input" id="bulkFileInput" type="file" multiple accept=".pdf,.epub,.zip,.rar,.doc,.docx,.txt,.png,.jpg,.jpeg,.mp3,.mp4,application/pdf,application/zip">
+        </nav>
+
+        <div class="upload-progress hidden" id="uploadProgress">
+          <div class="upload-progress-text" id="uploadProgressText">准备上传</div>
+          <div class="upload-progress-track">
+            <div class="upload-progress-bar" id="uploadProgressBar"></div>
+          </div>
+        </div>
+
+        <section class="editor-card">
+          <div class="editor-title">
+            <div>
+              <h2 id="sectionTitle">重点经咒</h2>
+              <p id="sectionHint">首页顶部卡片内容。</p>
+            </div>
+            <button id="addItemBtn">新增资料</button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>标题</th>
+                  <th>副标题</th>
+                  <th>大小</th>
+                  <th>页数</th>
+                  <th>选择文件</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="itemRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="editor-card hidden" id="messageEditor">
+          <div class="editor-title">
+            <div>
+              <h2>留言管理</h2>
+              <p>查看用户留言，填写回复后保存，首页会同步显示。</p>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="message-table">
+              <thead>
+                <tr>
+                  <th>称呼</th>
+                  <th>留言</th>
+                  <th>回复</th>
+                  <th>时间</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody id="messageRows"></tbody>
+            </table>
+          </div>
+        </section>
+        <div class="toast" id="toast"></div>
+      </section>
+    </main>
+    <script src="/admin.js"></script>
+  </body>
+</html>

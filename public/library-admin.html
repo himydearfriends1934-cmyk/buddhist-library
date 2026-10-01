@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>资料库编辑 - 佛学文化资料阅览</title>
+    <link rel="stylesheet" href="/library-admin.css">
+  </head>
+  <body>
+    <main class="library-admin">
+      <header class="library-header">
+        <div>
+          <h1>资料库编辑</h1>
+          <p>集中管理常用经书和资料下载包。</p>
+        </div>
+        <div class="header-actions">
+          <a href="/admin.html">返回后台</a>
+          <a href="/scriptures.html" target="_blank">查看前台</a>
+          <button id="batchDeleteBtn">批量删除</button>
+        </div>
+      </header>
+
+      <section class="library-tabs">
+        <button class="active" data-kind="scriptures">常用经书</button>
+        <button data-kind="downloads">资料下载包</button>
+      </section>
+
+      <section class="library-panel">
+        <div class="inline-login hidden" id="inlineLogin">
+          <strong>请先登录后台</strong>
+          <input id="loginUser" value="admin" placeholder="账号">
+          <input id="loginPass" value="123456" type="password" placeholder="密码">
+          <button id="loginBtn">登录</button>
+        </div>
+        <div class="library-tools">
+          <label class="select-all">
+            <input type="checkbox" id="selectAll">
+            全选
+          </label>
+          <span id="libraryCount"></span>
+        </div>
+        <div class="library-list" id="libraryList"></div>
+      </section>
+
+      <div class="toast" id="toast"></div>
+    </main>
+    <script src="/library-admin.js"></script>
+  </body>
+</html>

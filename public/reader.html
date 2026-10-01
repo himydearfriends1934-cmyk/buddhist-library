@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PDF 阅读 - 佛学文化资料阅览</title>
+    <link rel="stylesheet" href="/reader.css">
+  </head>
+  <body>
+    <header class="reader-header">
+      <a href="javascript:history.back()" class="back-link">返回</a>
+      <h1 id="readerTitle">PDF 阅读</h1>
+      <a id="downloadLink" class="download-link" href="#" download>下载</a>
+    </header>
+    <main class="reader-main">
+      <section class="book-reader" id="bookReader" aria-label="翻页 PDF 阅读器">
+        <button class="page-turn page-turn-prev" id="prevPage" type="button" aria-label="上一页">‹</button>
+        <div class="book-stage" id="bookStage">
+          <div class="book-shadow" aria-hidden="true"></div>
+          <canvas class="book-page current-page" id="pageCanvas" aria-label="当前 PDF 页面"></canvas>
+          <canvas class="book-page next-page" id="nextCanvas" aria-hidden="true"></canvas>
+          <div class="page-loading" id="pageLoading">正在加载 PDF...</div>
+        </div>
+        <button class="page-turn page-turn-next" id="nextPage" type="button" aria-label="下一页">›</button>
+      </section>
+      <div class="reader-controls">
+        <button id="firstPage" type="button">首页</button>
+        <span class="page-indicator"><strong id="pageNumber">0</strong> / <span id="pageCount">0</span></span>
+        <button id="readMode" type="button">适配阅读</button>
+        <button id="zoomOut" type="button" aria-label="缩小">－</button>
+        <button id="fitPage" type="button">适屏</button>
+        <button id="zoomIn" type="button" aria-label="放大">＋</button>
+        <button id="lastPage" type="button">末页</button>
+      </div>
+      <div class="reader-empty" id="readerEmpty">未找到 PDF 文件</div>
+    </main>
+    <script src="/vendor/pdfjs/pdf.min.js"></script>
+    <script src="/reader.js"></script>
+  </body>
+</html>
