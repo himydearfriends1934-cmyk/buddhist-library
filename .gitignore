@@ -2,7 +2,9 @@
 .env.*
 !.env.example
 data/site-data.json
+data/*.tmp*
 public/uploads/*
 !public/uploads/.gitkeep
 node_modules/
 *.log
+

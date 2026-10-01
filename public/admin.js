@@ -173,19 +173,22 @@ function fileToBase64(file) {
 async function pickAndUploadFile() {
   const input = document.createElement("input");
   input.type = "file";
-  input.accept = ".pdf,.epub,.zip,.rar,.doc,.docx,.txt,.png,.jpg,.jpeg,.mp3,.mp4,application/pdf,application/zip";
+  input.accept = ".pdf,.epub,.zip,.rar,.7z,.doc,.docx,.txt,.png,.jpg,.jpeg,.webp,.mp3,.mp4";
   return new Promise((resolve, reject) => {
     input.addEventListener("change", async () => {
       const file = input.files?.[0];
       if (!file) return resolve(null);
       try {
-        const contentBase64 = await fileToBase64(file);
-        const result = await request("/api/admin/upload", {
-          method: "POST",
-          body: JSON.stringify({ filename: file.name, contentBase64 })
+        setUploadProgress(0, 1, `正在上传：${file.name}`);
+        const result = await uploadRawFile(file, (loaded) => {
+          setUploadByteProgress(loaded, file.size, `正在上传：${file.name}`, 0, 1);
         });
+        setUploadProgress(1, 1, `已上传：${file.name}`);
+        hideUploadProgressLater();
         resolve({ file, result });
       } catch (error) {
+        $("#uploadProgress")?.classList.remove("hidden");
+        if ($("#uploadProgressText")) $("#uploadProgressText").textContent = `上传失败：${error.message}`;
         reject(error);
       }
     });

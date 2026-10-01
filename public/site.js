@@ -13,44 +13,63 @@ const iconSvg = {
 
 const $ = (selector) => document.querySelector(selector);
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function sanitizeUrl(url) {
+  const u = String(url || "").trim();
+  if (!u || u === "#") return "";
+  // 严格只允许以 http://, https://, / 开头的安全链接，阻止 javascript: 等伪协议
+  if (/^(?:https?:\/\/|\/)/i.test(u)) return u;
+  return "";
+}
+
 function metaText(item) {
-  return [item.subtitle, item.size, item.pages].filter(Boolean).join(" · ");
+  return [item.subtitle, item.size, item.pages].filter(Boolean).map(escapeHtml).join(" · ");
+}
+
+function readerUrl(item) {
+  const rawUrl = item.readUrl || item.downloadUrl || "";
+  const safeUrl = sanitizeUrl(rawUrl);
+  if (!safeUrl) return "";
+
+  const type = String(item.type || "").toLowerCase();
+  const isPdf = type === "pdf" || /\.pdf(?:$|\?)/i.test(safeUrl) || /\.pdf$/i.test(item.title || "");
+  if (!isPdf) return "";
+
+  const params = new URLSearchParams({ file: safeUrl, title: item.title || "PDF 阅读" });
+  return `/reader.html?${params.toString()}`;
 }
 
 function actionLinks(item, textMode = false) {
   const readUrl = readerUrl(item);
+  const downUrl = sanitizeUrl(item.downloadUrl);
   if (textMode) {
     return `
-      ${readUrl ? `<a class="read-text" href="${readUrl}">阅读</a>` : ""}
-      <a class="down-text" href="${item.downloadUrl || "#"}">下载</a>
+      ${readUrl ? `<a class="read-text" href="${escapeHtml(readUrl)}">阅读</a>` : ""}
+      ${downUrl ? `<a class="down-text" href="${escapeHtml(downUrl)}" download>下载</a>` : ""}
     `;
   }
   return `
     <div class="actions">
-      ${readUrl ? `<a href="${readUrl}">▣ 在线阅读</a>` : ""}
+      ${readUrl ? `<a href="${escapeHtml(readUrl)}">▣ 在线阅读</a>` : ""}
     </div>
   `;
 }
 
-function readerUrl(item) {
-  const url = item.readUrl || item.downloadUrl || "#";
-  const type = String(item.type || "").toLowerCase();
-  const isPdf = type === "pdf" || /\.pdf(?:$|\?)/i.test(url) || /\.pdf$/i.test(item.title || "");
-  if (!isPdf) return "";
-  if (url === "#") return "#";
-  if (isPdf) {
-    const params = new URLSearchParams({ file: url, title: item.title || "PDF 阅读" });
-    return `/reader.html?${params.toString()}`;
-  }
-  return "";
-}
-
 function resourceCard(item) {
+  const icon = iconSvg[item.icon] || iconSvg.lotus;
   return `
     <article class="resource-card">
-      <div class="mark">${iconSvg[item.icon] || iconSvg.lotus}</div>
+      <div class="mark">${icon}</div>
       <div>
-        <h3>${item.title}</h3>
+        <h3>${escapeHtml(item.title)}</h3>
         <p class="meta">${metaText(item)}</p>
         ${actionLinks(item)}
       </div>
@@ -59,11 +78,12 @@ function resourceCard(item) {
 }
 
 function smallItem(item) {
+  const icon = iconSvg[item.icon] || iconSvg.lotus;
   return `
     <article class="small-item">
-      <div class="mark">${iconSvg[item.icon] || iconSvg.lotus}</div>
+      <div class="mark">${icon}</div>
       <div>
-        <h3>${item.title}</h3>
+        <h3>${escapeHtml(item.title)}</h3>
         <p class="meta">${metaText(item)}</p>
         ${actionLinks(item)}
       </div>
@@ -76,7 +96,7 @@ function bookRow(item, index, textMode = false) {
     return `
       <div class="book-row">
         <span class="num">${index + 1}.</span>
-        <span>${item.title}</span>
+        <span>${escapeHtml(item.title)}</span>
         ${actionLinks(item, true)}
       </div>
     `;
@@ -85,31 +105,32 @@ function bookRow(item, index, textMode = false) {
   return `
     <div class="book-row">
       <span class="num">${index + 1}</span>
-      <span>${item.title}</span>
-      ${readUrl ? `<a class="read-text" href="${readUrl}">在线阅读</a>` : `<span class="file-type">${item.type || "PDF"}</span>`}
+      <span>${escapeHtml(item.title)}</span>
+      ${readUrl ? `<a class="read-text" href="${escapeHtml(readUrl)}">在线阅读</a>` : `<span class="file-type">${escapeHtml(item.type || "PDF")}</span>`}
     </div>
   `;
 }
 
 function downloadRow(item, compact = false) {
   const kind = (item.type || "PDF").toLowerCase();
+  const downUrl = sanitizeUrl(item.downloadUrl);
   if (compact) {
     const readUrl = readerUrl(item);
     return `
       <div class="archive-row">
         <span></span>
-        <span>${item.title}</span>
-        ${readUrl ? `<a class="read-text" href="${readUrl}">阅读</a>` : "<span></span>"}
-        <a class="down-text" href="${item.downloadUrl || "#"}">下载</a>
+        <span>${escapeHtml(item.title)}</span>
+        ${readUrl ? `<a class="read-text" href="${escapeHtml(readUrl)}">阅读</a>` : "<span></span>"}
+        ${downUrl ? `<a class="down-text" href="${escapeHtml(downUrl)}" download>下载</a>` : "<span></span>"}
       </div>
     `;
   }
   return `
     <div class="download-row">
-      <span class="file-icon ${kind}">${(item.type || "PDF").slice(0, 4)}</span>
-      <span>${item.title}</span>
-      <span class="file-type">${item.type || "PDF"} · ${item.size || ""}</span>
-      <a class="download-action" href="${item.downloadUrl || "#"}">↓ 下载</a>
+      <span class="file-icon ${escapeHtml(kind)}">${escapeHtml((item.type || "PDF").slice(0, 4))}</span>
+      <span>${escapeHtml(item.title)}</span>
+      <span class="file-type">${escapeHtml(item.type || "PDF")} · ${escapeHtml(item.size || "")}</span>
+      ${downUrl ? `<a class="download-action" href="${escapeHtml(downUrl)}" download>↓ 下载</a>` : `<span class="download-action disabled">无文件</span>`}
     </div>
   `;
 }
@@ -129,58 +150,73 @@ function messageRow(item) {
   `;
 }
 
-function escapeHtml(value) {
-  return String(value || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
 async function loadData() {
-  const response = await fetch("/api/data");
-  return response.json();
+  try {
+    const response = await fetch("/api/data");
+    if (!response.ok) throw new Error("加载数据失败");
+    return await response.json();
+  } catch (err) {
+    console.error("加载数据异常:", err);
+    return {
+      settings: { title: "佛学文化资料阅览", subtitle: "经典经文、电子书籍与佛学文化学习资料" },
+      important: [],
+      smallMantras: [],
+      scriptures: [],
+      downloads: [],
+      messages: []
+    };
+  }
 }
 
 function renderHome(data) {
-  $("#siteTitle").textContent = data.settings.title;
-  $("#siteSubtitle").textContent = data.settings.subtitle;
-  $("#importantGrid").innerHTML = data.important.map(resourceCard).join("");
-  $("#smallGrid").innerHTML = data.smallMantras.slice(0, 5).map(smallItem).join("");
-  $("#scripturePreview").innerHTML = data.scriptures.slice(0, 12).map((item, index) => bookRow(item, index)).join("");
-  $("#downloadPreview").innerHTML = data.downloads.slice(0, 6).map((item) => downloadRow(item)).join("");
-  $("#messageList").innerHTML = (data.messages || []).slice(0, 5).map(messageRow).join("");
+  const settings = data.settings || {};
+  if ($("#siteTitle")) $("#siteTitle").textContent = settings.title || "佛学文化资料阅览";
+  if ($("#siteSubtitle")) $("#siteSubtitle").textContent = settings.subtitle || "";
+  if ($("#importantGrid")) $("#importantGrid").innerHTML = (data.important || []).map(resourceCard).join("");
+  if ($("#smallGrid")) $("#smallGrid").innerHTML = (data.smallMantras || []).slice(0, 5).map(smallItem).join("");
+  if ($("#scripturePreview")) $("#scripturePreview").innerHTML = (data.scriptures || []).slice(0, 12).map((item, index) => bookRow(item, index)).join("");
+  if ($("#downloadPreview")) $("#downloadPreview").innerHTML = (data.downloads || []).slice(0, 6).map((item) => downloadRow(item)).join("");
+  if ($("#messageList")) $("#messageList").innerHTML = (data.messages || []).slice(0, 5).map(messageRow).join("");
 }
 
 function renderScriptures(data) {
+  const scriptures = Array.isArray(data.scriptures) ? data.scriptures : [];
   const columnSize = 25;
-  const columns = [
-    data.scriptures.slice(0, columnSize),
-    data.scriptures.slice(columnSize, columnSize * 2),
-    data.scriptures.slice(columnSize * 2, columnSize * 3)
-  ];
-  columns.push(data.downloads);
+  const totalCount = scriptures.length;
+  const numColumns = Math.max(1, Math.ceil(totalCount / columnSize));
+  const columns = [];
 
-  $("#scriptureColumns").innerHTML = columns.map((items, columnIndex) => {
-    const rows = items.map((item, rowIndex) => {
-      if (columnIndex === columns.length - 1) {
-        return `
-          <div class="book-row">
-            <span class="num">${rowIndex + 1}.</span>
-            <span>${item.title}</span>
-            ${actionLinks(item, true)}
-          </div>
-        `;
-      }
-      const globalIndex = columnIndex * columnSize + rowIndex;
-      return bookRow(item, globalIndex, true);
-    }).join("");
-    return `<div class="scripture-column">${rows}</div>`;
-  }).join("");
+  // 修复经书超过 75 本被截断丢失的 Bug：动态根据经书总量自适应切分列
+  for (let i = 0; i < numColumns; i++) {
+    columns.push(scriptures.slice(i * columnSize, (i + 1) * columnSize));
+  }
 
-  $("#archiveList").innerHTML = data.downloads.map((item, index) => {
-    return downloadRow({ ...item, title: `${index + 1}. ${item.title}` }, true);
-  }).join("");
+  const scriptureCols = $("#scriptureColumns");
+  if (scriptureCols) {
+    if (totalCount === 0) {
+      scriptureCols.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #888; padding: 2rem;">暂无经书资料</div>`;
+    } else {
+      scriptureCols.innerHTML = columns.map((items, columnIndex) => {
+        const rows = items.map((item, rowIndex) => {
+          const globalIndex = columnIndex * columnSize + rowIndex;
+          return bookRow(item, globalIndex, true);
+        }).join("");
+        return `<div class="scripture-column">${rows}</div>`;
+      }).join("");
+    }
+  }
+
+  const archiveList = $("#archiveList");
+  if (archiveList) {
+    const downloads = Array.isArray(data.downloads) ? data.downloads : [];
+    if (downloads.length === 0) {
+      archiveList.innerHTML = `<div style="text-align: center; color: #888; padding: 1.5rem;">暂无下载资料包</div>`;
+    } else {
+      archiveList.innerHTML = downloads.map((item, index) => {
+        return downloadRow({ ...item, title: `${index + 1}. ${item.title}` }, true);
+      }).join("");
+    }
+  }
 }
 
 loadData().then((data) => {
@@ -191,14 +227,18 @@ loadData().then((data) => {
 if ($("#messageForm")) {
   $("#messageForm").addEventListener("submit", async (event) => {
     event.preventDefault();
-    const name = $("#messageName").value.trim();
-    const content = $("#messageContent").value.trim();
+    const nameInput = $("#messageName");
+    const contentInput = $("#messageContent");
     const status = $("#messageStatus");
+    const name = nameInput ? nameInput.value.trim() : "";
+    const content = contentInput ? contentInput.value.trim() : "";
     status.textContent = "";
+
     if (!content) {
       status.textContent = "请填写留言内容";
       return;
     }
+
     try {
       const response = await fetch("/api/messages", {
         method: "POST",
@@ -207,8 +247,8 @@ if ($("#messageForm")) {
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || "提交失败");
-      $("#messageContent").value = "";
-      status.textContent = "已提交";
+      if (contentInput) contentInput.value = "";
+      status.textContent = "已提交留言";
       const data = await loadData();
       renderHome(data);
     } catch (error) {

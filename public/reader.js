@@ -32,9 +32,20 @@ let resizeTimer = null;
 let touchStartX = 0;
 let touchStartY = 0;
 
+function sanitizePdfUrl(rawUrl) {
+  const u = String(rawUrl || "").trim();
+  if (/^(?:https?:\/\/|\/)/i.test(u)) return u;
+  return "";
+}
+
+const safeFile = sanitizePdfUrl(file);
+
 document.title = `${title} - PDF 阅读`;
 document.querySelector("#readerTitle").textContent = title;
-document.querySelector("#downloadLink").href = file || "#";
+document.querySelector("#downloadLink").href = safeFile || "#";
+if (!safeFile) {
+  document.querySelector("#downloadLink").style.display = "none";
+}
 
 function showError(message) {
   reader.hidden = true;
@@ -268,24 +279,24 @@ window.addEventListener("resize", () => {
 });
 
 async function loadPdf() {
-  if (!file) {
-    showError("未找到 PDF 文件");
+  if (!safeFile) {
+    showError("未找到合法的 PDF 文件链接");
     return;
   }
 
   try {
     loading.classList.add("show");
     const task = pdfjsLib.getDocument({
-      url: file,
-      disableRange: true,
-      disableStream: true,
+      url: safeFile,
+      disableRange: false,
+      disableStream: false,
       cMapUrl: "/vendor/pdfjs/cmaps/",
       cMapPacked: true,
       standardFontDataUrl: "/vendor/pdfjs/standard_fonts/"
     });
     pdfDocument = await task.promise;
     pageCount.textContent = String(pdfDocument.numPages);
-    if (window.matchMedia("(max-width: 700px)").matches) setReaderMode(true);
+    // 默认保持原版 Canvas 适屏渲染，避免扫描版经书在手机端因无文字层显示为空白报错
     await showPage(1);
   } catch (error) {
     showError("PDF 加载失败，请检查文件是否存在。");
