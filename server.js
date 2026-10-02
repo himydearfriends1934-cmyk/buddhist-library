@@ -67,7 +67,8 @@ const mimeTypes = {
   ".7z": "application/x-7z-compressed",
   ".txt": "text/plain; charset=utf-8",
   ".mp3": "audio/mpeg",
-  ".mp4": "video/mp4"
+  ".mp4": "video/mp4",
+  ".webmanifest": "application/manifest+json; charset=utf-8"
 };
 
 const ALLOWED_UPLOAD_EXTS = new Set([
@@ -231,6 +232,7 @@ function cleanMessage(message) {
     name: String(message.name || "善友").trim().slice(0, 24) || "善友",
     content: String(message.content || "").trim().slice(0, 300),
     reply: String(message.reply || "").trim().slice(0, 300),
+    hidden: Boolean(message.hidden),
     createdAt: String(message.createdAt || new Date().toISOString())
   };
 }
@@ -303,7 +305,12 @@ async function handleApi(req, res) {
   const clientIp = getClientIp(req);
 
   if (req.method === "GET" && url.pathname === "/api/data") {
-    return send(res, 200, JSON.stringify(readData()));
+    const data = readData();
+    const publicData = {
+      ...data,
+      messages: (data.messages || []).filter((item) => !item.hidden)
+    };
+    return send(res, 200, JSON.stringify(publicData));
   }
 
   if (req.method === "POST" && url.pathname === "/api/messages") {
@@ -459,6 +466,46 @@ async function handleApi(req, res) {
     }
     fs.rmSync(resolved, { force: true });
     return send(res, 200, JSON.stringify({ ok: true }));
+  }
+
+  // 导出数据备份 (JSON)
+  if (req.method === "GET" && url.pathname === "/api/admin/export-data") {
+    const dataStr = JSON.stringify(readData(), null, 2);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    return send(res, 200, dataStr, "application/json; charset=utf-8", {
+      "Content-Disposition": `attachment; filename="buddhist-library-backup-${dateStr}.json"`
+    });
+  }
+
+  // 导入数据备份 (JSON)
+  if (req.method === "POST" && url.pathname === "/api/admin/import-data") {
+    const body = await readJsonBody(req, 20 * 1024 * 1024);
+    if (!body || typeof body !== "object" || !body.settings) {
+      return send(res, 400, JSON.stringify({ ok: false, message: "备份数据无效，缺少必要的 settings 结构" }));
+    }
+
+    // 自动对现有数据建立快照备份
+    if (fs.existsSync(dataFile)) {
+      const snapFile = `${dataFile}.bak.${Date.now()}`;
+      try { fs.copyFileSync(dataFile, snapFile); } catch (e) {}
+    }
+
+    const current = readData();
+    const next = {
+      settings: {
+        title: String(body.settings?.title ?? current.settings?.title ?? "佛学文化资料阅览"),
+        subtitle: String(body.settings?.subtitle ?? current.settings?.subtitle ?? ""),
+        notice: String(body.settings?.notice ?? current.settings?.notice ?? "")
+      },
+      important: Array.isArray(body.important) ? body.important.map(cleanItem).filter((i) => i.title) : (current.important || []),
+      smallMantras: Array.isArray(body.smallMantras) ? body.smallMantras.map(cleanItem).filter((i) => i.title).slice(0, 5) : (current.smallMantras || []),
+      scriptures: Array.isArray(body.scriptures) ? body.scriptures.map(cleanItem).filter((i) => i.title) : (current.scriptures || []),
+      downloads: Array.isArray(body.downloads) ? body.downloads.map(cleanItem).filter((i) => i.title) : (current.downloads || []),
+      messages: Array.isArray(body.messages) ? body.messages.map(cleanMessage).filter((i) => i.content) : (current.messages || [])
+    };
+
+    writeData(next);
+    return send(res, 200, JSON.stringify({ ok: true, message: "数据还原成功！", data: next }));
   }
 
   // 检查版本更新接口

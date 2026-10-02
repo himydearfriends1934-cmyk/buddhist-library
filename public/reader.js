@@ -68,6 +68,13 @@ function updateControls() {
   zoomInButton.disabled = textMode || zoomLevel >= 2.15;
   fitPageButton.disabled = textMode;
   fitPageButton.classList.toggle("active", fitMode && !textMode);
+
+  // 保存当前阅读进度
+  if (safeFile && currentPage > 0) {
+    try {
+      localStorage.setItem(`buddhist_read_prog_${encodeURIComponent(safeFile)}`, String(currentPage));
+    } catch (e) {}
+  }
 }
 
 function ensureTextPage() {
@@ -124,7 +131,7 @@ async function renderTextPage(pageIndex) {
   element.innerHTML = "";
 
   if (!text) {
-    element.innerHTML = `<p class="text-empty">这一页没有可提取文字，请切回原版页面阅读。</p>`;
+    element.innerHTML = `<p class="text-empty">本页未提取到文字排版层，建议点击“原版页面”以图像模式阅读。</p>`;
     return;
   }
 
@@ -210,7 +217,7 @@ async function showPage(pageIndex, direction = 0) {
     currentPage = pageIndex;
     updateControls();
   } catch (error) {
-    showError("PDF 页面加载失败，请检查文件是否完整。");
+    showError("经书页面加载失败，请检查文件是否存在。");
     console.error(error);
   } finally {
     loading.classList.remove("show");
@@ -278,9 +285,117 @@ window.addEventListener("resize", () => {
   resizeTimer = setTimeout(() => showPage(currentPage), 180);
 });
 
+// ==================== 护眼与夜间色彩模式 ====================
+function initTheme() {
+  const savedTheme = localStorage.getItem("buddhist_reader_theme") || "white";
+  applyTheme(savedTheme);
+
+  document.querySelectorAll("#themePicker .theme-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const theme = btn.dataset.theme;
+      applyTheme(theme);
+      localStorage.setItem("buddhist_reader_theme", theme);
+    });
+  });
+}
+
+function applyTheme(theme) {
+  document.body.classList.remove("theme-white", "theme-sepia", "theme-dark");
+  document.body.classList.add(`theme-${theme}`);
+  document.querySelectorAll("#themePicker .theme-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.theme === theme);
+  });
+}
+
+initTheme();
+
+// ==================== 目录大纲抽屉 (TOC) ====================
+const tocDrawer = document.querySelector("#tocDrawer");
+const tocBackdrop = document.querySelector("#tocBackdrop");
+const tocToggleBtn = document.querySelector("#tocToggleBtn");
+const closeTocBtn = document.querySelector("#closeTocBtn");
+const tocList = document.querySelector("#tocList");
+
+function toggleToc(show) {
+  if (!tocDrawer || !tocBackdrop) return;
+  const willShow = typeof show === "boolean" ? show : tocDrawer.classList.contains("hidden");
+  tocDrawer.classList.toggle("hidden", !willShow);
+  tocBackdrop.classList.toggle("hidden", !willShow);
+}
+
+tocToggleBtn?.addEventListener("click", () => toggleToc(true));
+closeTocBtn?.addEventListener("click", () => toggleToc(false));
+tocBackdrop?.addEventListener("click", () => toggleToc(false));
+
+async function renderOutline(outline, container) {
+  if (!outline || !outline.length) {
+    container.innerHTML = `<div class="toc-empty">此本经书未包含内置目录大纲</div>`;
+    return;
+  }
+
+  container.innerHTML = "";
+  const ul = document.createElement("ul");
+  ul.className = "toc-tree";
+
+  for (const item of outline) {
+    const li = document.createElement("li");
+    const link = document.createElement("a");
+    link.textContent = item.title;
+    link.href = "#";
+
+    link.addEventListener("click", async (e) => {
+      e.preventDefault();
+      toggleToc(false);
+      try {
+        let dest = item.dest;
+        if (typeof dest === "string") {
+          dest = await pdfDocument.getDestination(dest);
+        }
+        if (Array.isArray(dest)) {
+          const pageRef = dest[0];
+          const pageIndex = await pdfDocument.getPageIndex(pageRef);
+          showPage(pageIndex + 1);
+        }
+      } catch (err) {
+        console.warn("目录跳转失败:", err);
+      }
+    });
+
+    li.appendChild(link);
+    if (item.items && item.items.length) {
+      const subUl = document.createElement("ul");
+      await renderOutline(item.items, subUl);
+      li.appendChild(subUl);
+    }
+    ul.appendChild(li);
+  }
+  container.appendChild(ul);
+}
+
+// ==================== 全屏沉浸阅读 ====================
+const fullscreenBtn = document.querySelector("#fullscreenBtn");
+if (fullscreenBtn) {
+  fullscreenBtn.addEventListener("click", () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      fullscreenBtn.textContent = "✕";
+    } else {
+      document.exitFullscreen().catch(() => {});
+      fullscreenBtn.textContent = "⛶";
+    }
+  });
+
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement) {
+      fullscreenBtn.textContent = "⛶";
+    }
+  });
+}
+
+// ==================== 加载 PDF 与阅读进度记忆 ====================
 async function loadPdf() {
   if (!safeFile) {
-    showError("未找到合法的 PDF 文件链接");
+    showError("未找到合法的经书文件链接");
     return;
   }
 
@@ -296,10 +411,47 @@ async function loadPdf() {
     });
     pdfDocument = await task.promise;
     pageCount.textContent = String(pdfDocument.numPages);
-    // 默认保持原版 Canvas 适屏渲染，避免扫描版经书在手机端因无文字层显示为空白报错
-    await showPage(1);
+
+    // 尝试解析经书大纲目录
+    try {
+      const outline = await pdfDocument.getOutline();
+      if (tocList) renderOutline(outline, tocList);
+    } catch (e) {
+      if (tocList) tocList.innerHTML = `<div class="toc-empty">此经书无目录大纲</div>`;
+    }
+
+    // 检测是否有上次阅读记录
+    let targetPage = 1;
+    const lastPageKey = `buddhist_read_prog_${encodeURIComponent(safeFile)}`;
+    const savedPage = parseInt(localStorage.getItem(lastPageKey) || "1", 10);
+
+    if (savedPage > 1 && savedPage <= pdfDocument.numPages) {
+      const toast = document.querySelector("#resumeToast");
+      const pageNumEl = document.querySelector("#resumePageNum");
+      const goBtn = document.querySelector("#resumeGoBtn");
+      const dismissBtn = document.querySelector("#resumeDismissBtn");
+
+      if (toast && pageNumEl) {
+        pageNumEl.textContent = String(savedPage);
+        toast.classList.remove("hidden");
+
+        goBtn?.addEventListener("click", () => {
+          toast.classList.add("hidden");
+          showPage(savedPage);
+        });
+
+        dismissBtn?.addEventListener("click", () => {
+          toast.classList.add("hidden");
+        });
+
+        // 5秒后自动淡出提示
+        setTimeout(() => toast.classList.add("hidden"), 6000);
+      }
+    }
+
+    await showPage(targetPage);
   } catch (error) {
-    showError("PDF 加载失败，请检查文件是否存在。");
+    showError("经书加载失败，请检查文件是否存在。");
     console.error(error);
   } finally {
     loading.classList.remove("show");

@@ -457,3 +457,281 @@ button:not(:disabled):active {
     animation-duration: 0.01ms;
   }
 }
+
+/* ==================== 顶部功能扩展 ==================== */
+.reader-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.header-btn {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #d5c7b5;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #3b2f2f;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.header-btn:hover {
+  background: #f5ece2;
+}
+
+.fullscreen-btn {
+  font-size: 15px;
+  padding: 3px 8px;
+}
+
+/* ==================== 护眼与夜读主题 ==================== */
+.theme-picker {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 4px;
+  border-radius: 14px;
+}
+
+.theme-btn {
+  border: 1px solid transparent;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.theme-btn[data-theme="white"] {
+  background: #ffffff;
+  color: #333;
+}
+
+.theme-btn[data-theme="sepia"] {
+  background: #f4ecd8;
+  color: #5c4033;
+}
+
+.theme-btn[data-theme="dark"] {
+  background: #1e1e24;
+  color: #d4af37;
+}
+
+.theme-btn.active {
+  border-color: #8d3a2a;
+  transform: scale(1.1);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.3);
+}
+
+/* 羊皮纸护眼黄主题 */
+body.theme-sepia {
+  background: #f5eedc;
+}
+
+body.theme-sepia .reader-header,
+body.theme-sepia .reader-controls {
+  background: #ede3cc;
+  border-color: #d8cbb0;
+}
+
+body.theme-sepia .book-page {
+  filter: sepia(0.25) contrast(0.95);
+}
+
+body.theme-sepia .text-page {
+  background: #fbf5e8;
+  color: #2e261f;
+  border-color: #dfd4be;
+}
+
+/* 庄严夜读黑底金字主题 */
+body.theme-dark {
+  background: #141416;
+  color: #d1c7b7;
+}
+
+body.theme-dark .reader-header,
+body.theme-dark .reader-controls {
+  background: #1c1c20;
+  border-color: #2e2e34;
+  color: #d1c7b7;
+}
+
+body.theme-dark .reader-header h1 {
+  color: #dfb15b;
+}
+
+body.theme-dark .header-btn,
+body.theme-dark .reader-controls button {
+  background: #25252b;
+  border-color: #3e3e46;
+  color: #e2d8c9;
+}
+
+body.theme-dark .reader-controls button:hover {
+  background: #32323a;
+}
+
+body.theme-dark .book-page {
+  filter: invert(0.9) hue-rotate(180deg) brightness(0.92);
+}
+
+body.theme-dark .text-page {
+  background: #1c1c20;
+  color: #dfb15b;
+  border-color: #33333c;
+}
+
+/* ==================== 目录大纲抽屉 (TOC) ==================== */
+.toc-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: min(340px, 85vw);
+  height: 100vh;
+  background: #fffdfa;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.18);
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.25s ease-out;
+}
+
+.toc-drawer.hidden {
+  transform: translateX(-100%);
+  display: flex !important;
+}
+
+.toc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #ebd9c3;
+  background: #fbf6ee;
+}
+
+.toc-header strong {
+  font-size: 16px;
+  color: #8d3a2a;
+}
+
+.close-toc {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: #716254;
+  cursor: pointer;
+}
+
+.toc-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+}
+
+.toc-tree,
+.toc-tree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 14px;
+}
+
+.toc-tree {
+  padding-left: 0;
+}
+
+.toc-tree li {
+  margin-bottom: 8px;
+}
+
+.toc-tree a {
+  display: block;
+  font-size: 14px;
+  color: #3c3228;
+  text-decoration: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.toc-tree a:hover {
+  background: #f4ecdf;
+  color: #8d3a2a;
+}
+
+.toc-empty {
+  text-align: center;
+  color: #928374;
+  font-size: 14px;
+  padding: 2rem 0;
+}
+
+.toc-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1000;
+}
+
+/* ==================== 进度恢复提示条 ==================== */
+.resume-toast {
+  position: fixed;
+  top: 60px;
+  right: 20px;
+  background: rgba(255, 252, 245, 0.96);
+  border: 1px solid #dfcfbc;
+  border-left: 4px solid #8d3a2a;
+  border-radius: 6px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 998;
+  font-size: 13px;
+}
+
+.resume-toast strong {
+  color: #8d3a2a;
+}
+
+.resume-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.resume-actions button {
+  background: #8d3a2a;
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+#resumeDismissBtn {
+  background: transparent;
+  color: #716254;
+  padding: 2px 6px;
+}
+

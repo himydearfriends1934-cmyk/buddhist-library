@@ -1096,3 +1096,298 @@ select {
     margin-top: 10px;
   }
 }
+
+/* ==================== 平台说明横幅 ==================== */
+.notice-banner {
+  max-width: 1220px;
+  margin: -10px auto 20px;
+  padding: 0 16px;
+}
+
+.notice-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fdf8f0;
+  border: 1px solid #ebd9c3;
+  border-left: 4px solid var(--accent, #8d3a2a);
+  border-radius: 8px;
+  padding: 12px 18px;
+  box-shadow: 0 2px 8px rgba(118, 89, 55, 0.05);
+}
+
+.notice-icon {
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.notice-content {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #433830;
+}
+
+.notice-content strong {
+  color: var(--accent, #8d3a2a);
+}
+
+/* ==================== 实时搜索栏 ==================== */
+.search-bar-wrap {
+  margin-bottom: 24px;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dfcfbc;
+  border-radius: 30px;
+  padding: 6px 18px;
+  box-shadow: 0 3px 12px rgba(100, 75, 45, 0.06);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-box:focus-within {
+  border-color: var(--accent, #8d3a2a);
+  box-shadow: 0 3px 16px rgba(141, 58, 42, 0.15);
+}
+
+.search-icon {
+  font-size: 17px;
+  margin-right: 10px;
+  opacity: 0.6;
+}
+
+.search-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 16px;
+  color: #2c241c;
+  background: transparent;
+  padding: 8px 0;
+}
+
+.clear-search {
+  border: none;
+  background: #eee3d5;
+  color: #6d5b4a;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.clear-search:hover {
+  background: #dfcdbc;
+}
+
+.search-result-hint {
+  font-size: 14px;
+  color: #8d3a2a;
+  font-weight: 500;
+  margin-top: 8px;
+  padding-left: 14px;
+}
+
+.search-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #9c8e7f;
+  padding: 1.5rem;
+  font-size: 15px;
+}
+
+/* ==================== 经书行与下载行排版美化 ==================== */
+.book-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border-bottom: 1px dashed rgba(142, 115, 85, 0.22);
+}
+
+.book-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.book-title,
+.download-title,
+.archive-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 15px;
+  color: #2c251f;
+}
+
+.book-right,
+.download-right,
+.archive-actions,
+.row-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.action-btn:active {
+  transform: scale(0.96);
+}
+
+.read-pill {
+  background: #f0ebe2;
+  color: #723b2c;
+  border-color: #dfd4c5;
+}
+
+.read-pill:hover {
+  background: #e4dcce;
+}
+
+.down-pill,
+.download-action {
+  background: #e8f3ec;
+  color: #1b633b;
+  border-color: #c9e2d2;
+}
+
+.down-pill:hover,
+.download-action:hover {
+  background: #d8ebd0;
+}
+
+.listen-pill,
+.listen-btn {
+  background: #fdf2e9;
+  color: #b45309;
+  border-color: #f7dcbb;
+}
+
+.listen-pill:hover,
+.listen-btn:hover {
+  background: #fce7d2;
+}
+
+/* ==================== 全局浮动音频播放器 ==================== */
+.audio-player-bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px));
+  background: rgba(254, 252, 248, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #ebd8c3;
+  border-radius: 36px;
+  box-shadow: 0 6px 24px rgba(78, 55, 30, 0.16);
+  z-index: 999;
+  padding: 8px 18px;
+}
+
+.audio-player-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.audio-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  max-width: 220px;
+}
+
+.audio-icon {
+  font-size: 20px;
+}
+
+.audio-texts strong {
+  display: block;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #2c251f;
+}
+
+.audio-texts span {
+  font-size: 11px;
+  color: #7b6d61;
+}
+
+.audio-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+
+.audio-btn {
+  background: #8d3a2a;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  transition: opacity 0.15s;
+}
+
+.audio-btn:hover {
+  opacity: 0.9;
+}
+
+.audio-btn.loop {
+  background: #f0ebe2;
+  color: #66574a;
+  font-size: 14px;
+}
+
+.audio-btn.loop.active {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.audio-btn.close {
+  background: #ece3d7;
+  color: #716254;
+  font-size: 12px;
+}
+
+.audio-controls input[type="range"] {
+  flex: 1;
+  accent-color: #8d3a2a;
+  cursor: pointer;
+}
+

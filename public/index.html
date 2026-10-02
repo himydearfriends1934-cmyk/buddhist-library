@@ -3,7 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#8d3a2a">
+    <meta name="description" content="经典经文、电子书籍与佛学文化学习资料的浏览与管理站点">
     <title>佛学文化资料阅览</title>
+    <link rel="manifest" href="/manifest.webmanifest">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
@@ -15,8 +18,29 @@
       <p id="siteSubtitle">经典经文、电子书籍与佛学文化学习资料</p>
     </header>
 
+    <!-- 平台说明/修学寄语横幅 -->
+    <section class="notice-banner hidden" id="noticeBanner">
+      <div class="notice-inner">
+        <span class="notice-icon" aria-hidden="true">🪷</span>
+        <div class="notice-content">
+          <strong>修学说明：</strong>
+          <span id="siteNoticeText"></span>
+        </div>
+      </div>
+    </section>
+
     <main class="shell">
-      <section class="panel">
+      <!-- 实时快速搜索栏 -->
+      <section class="search-bar-wrap" aria-label="资料搜索">
+        <div class="search-box">
+          <span class="search-icon" aria-hidden="true">🔍</span>
+          <input id="siteSearchInput" type="text" placeholder="输入经文、经咒、经书或下载包关键词实时检索..." autocomplete="off">
+          <button id="clearSearchBtn" class="clear-search hidden" type="button" aria-label="清空搜索">✕</button>
+        </div>
+        <div class="search-result-hint hidden" id="searchResultHint"></div>
+      </section>
+
+      <section class="panel" id="importantSection">
         <div class="section-title">
           <span class="lotus-mini">莲</span>
           <h2>重点经咒</h2>
@@ -24,7 +48,7 @@
         <div class="important-grid" id="importantGrid"></div>
       </section>
 
-      <section class="panel">
+      <section class="panel" id="smallSection">
         <div class="section-title">
           <span class="lotus-mini">莲</span>
           <h2>小咒</h2>
@@ -33,7 +57,7 @@
       </section>
 
       <section class="two-columns">
-        <article class="panel">
+        <article class="panel" id="scriptureSection">
           <div class="section-title row-title">
             <span class="lotus-mini">莲</span>
             <h2>常用经书</h2>
@@ -42,7 +66,7 @@
           <div class="book-list compact" id="scripturePreview"></div>
         </article>
 
-        <article class="panel">
+        <article class="panel" id="downloadSection">
           <div class="section-title row-title">
             <span class="lotus-mini">莲</span>
             <h2>常用下载区</h2>
@@ -66,6 +90,26 @@
         <div class="message-status" id="messageStatus"></div>
       </section>
     </main>
+
+    <!-- 浮动在线音频跟诵播放器组件 -->
+    <aside class="audio-player-bar hidden" id="audioPlayerBar" aria-label="音频播放器">
+      <div class="audio-player-inner">
+        <div class="audio-info">
+          <span class="audio-icon" aria-hidden="true">🎵</span>
+          <div class="audio-texts">
+            <strong id="audioTitle">音频梵呗</strong>
+            <span id="audioTime">00:00 / 00:00</span>
+          </div>
+        </div>
+        <audio id="globalAudio" preload="none"></audio>
+        <div class="audio-controls">
+          <button id="audioPlayBtn" type="button" class="audio-btn" aria-label="播放或暂停">▶</button>
+          <button id="audioLoopBtn" type="button" class="audio-btn loop" aria-label="单曲循环" title="单曲循环">🔁</button>
+          <input id="audioProgress" type="range" min="0" max="100" value="0" aria-label="播放进度">
+          <button id="audioCloseBtn" type="button" class="audio-btn close" aria-label="关闭播放器">✕</button>
+        </div>
+      </div>
+    </aside>
 
     <a class="admin-entry" href="/admin.html" aria-label="进入后台管理">
       <span>后台</span>

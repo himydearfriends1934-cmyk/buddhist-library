@@ -146,19 +146,27 @@ function renderRows() {
 
 function renderMessageRows() {
   const messages = Array.isArray(state.messages) ? state.messages : [];
-  $("#messageRows").innerHTML = messages.map((message, index) => `
-    <tr data-message-index="${index}">
-      <td>${escapeHtml(message.name || "善友")}</td>
-      <td><div class="message-content">${escapeHtml(message.content || "")}</div></td>
-      <td><textarea data-message-key="reply" placeholder="填写回复">${escapeHtml(message.reply || "")}</textarea></td>
-      <td>${message.createdAt ? new Date(message.createdAt).toLocaleString("zh-CN") : ""}</td>
-      <td>
-        <div class="row-actions">
-          <button class="danger" data-message-action="delete">删除</button>
-        </div>
-      </td>
-    </tr>
-  `).join("");
+  $("#messageRows").innerHTML = messages.map((message, index) => {
+    const isHidden = Boolean(message.hidden);
+    const statusText = isHidden ? "🙈 已隐藏" : "👁️ 公开中";
+    const statusClass = isHidden ? "ghost" : "secondary";
+    return `
+      <tr data-message-index="${index}">
+        <td>${escapeHtml(message.name || "善友")}</td>
+        <td><div class="message-content">${escapeHtml(message.content || "")}</div></td>
+        <td><textarea data-message-key="reply" placeholder="填写回复">${escapeHtml(message.reply || "")}</textarea></td>
+        <td>
+          <button class="${statusClass}" data-message-action="toggle-visibility" type="button" title="点击切换前台显示状态">${statusText}</button>
+        </td>
+        <td>${message.createdAt ? new Date(message.createdAt).toLocaleString("zh-CN") : ""}</td>
+        <td>
+          <div class="row-actions">
+            <button class="danger" data-message-action="delete">删除</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function fileToBase64(file) {
@@ -398,6 +406,12 @@ $("#messageRows").addEventListener("click", async (event) => {
     await persistData();
     showToast("留言已删除");
   }
+  if (button.dataset.messageAction === "toggle-visibility") {
+    state.messages[index].hidden = !state.messages[index].hidden;
+    renderMessageRows();
+    await persistData();
+    showToast(state.messages[index].hidden ? "已隐藏此留言（前台不展示）" : "已公开此留言（前台正常展示）");
+  }
 });
 
 $("#itemRows").addEventListener("click", async (event) => {
@@ -620,6 +634,46 @@ $("#checkUpdateBtn")?.addEventListener("click", () => checkUpdate(true));
 $("#startUpdateBtn")?.addEventListener("click", doOnlineUpdate);
 $("#dismissUpdateBtn")?.addEventListener("click", () => {
   $("#updateCard")?.classList.add("hidden");
+});
+
+// ==================== 数据备份与导入恢复 ====================
+$("#exportDataBtn")?.addEventListener("click", () => {
+  showToast("正在导出全站数据备份...");
+  window.location.href = "/api/admin/export-data";
+});
+
+$("#importDataBtn")?.addEventListener("click", () => {
+  const fileInput = $("#importFileInput");
+  if (fileInput) {
+    fileInput.value = "";
+    fileInput.click();
+  }
+});
+
+$("#importFileInput")?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  if (!confirm(`确定要从备份文件【${file.name}】恢复全站数据吗？\n当前系统会自动保留一份快照，但现有设置将被覆盖。`)) {
+    return;
+  }
+
+  showToast("正在导入备份数据...");
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const res = await request("/api/admin/import-data", {
+      method: "POST",
+      body: JSON.stringify(parsed)
+    });
+    showToast(res.message || "数据还原成功！");
+    state = res.data;
+    syncSettingsFromState();
+    renderRows();
+  } catch (err) {
+    alert(`恢复数据失败: ${err.message}`);
+    showToast(`导入失败: ${err.message}`);
+  }
 });
 
 loadAdminData().then(() => {

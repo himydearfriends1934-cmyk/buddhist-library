@@ -3,15 +3,50 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#8d3a2a">
     <title>PDF 阅读 - 佛学文化资料阅览</title>
     <link rel="stylesheet" href="/reader.css">
   </head>
-  <body>
+  <body class="theme-white">
     <header class="reader-header">
-      <a href="javascript:history.back()" class="back-link">返回</a>
+      <div class="header-left">
+        <a href="javascript:history.back()" class="back-link">返回</a>
+        <button class="header-btn toc-btn" id="tocToggleBtn" type="button" title="经书目录">📖 目录</button>
+      </div>
       <h1 id="readerTitle">PDF 阅读</h1>
-      <a id="downloadLink" class="download-link" href="#" download>下载</a>
+      <div class="header-right">
+        <!-- 护眼与夜读诵经模式切换 -->
+        <div class="theme-picker" id="themePicker" aria-label="阅读色彩模式">
+          <button class="theme-btn active" data-theme="white" title="经典纯白" type="button">白</button>
+          <button class="theme-btn sepia" data-theme="sepia" title="禅意羊皮纸护眼" type="button">黄</button>
+          <button class="theme-btn dark" data-theme="dark" title="庄严夜读黑" type="button">夜</button>
+        </div>
+        <button class="header-btn fullscreen-btn" id="fullscreenBtn" type="button" title="全屏沉浸阅读">⛶</button>
+        <a id="downloadLink" class="download-link" href="#" download>下载</a>
+      </div>
     </header>
+
+    <!-- 经书目录大纲抽屉 -->
+    <aside class="toc-drawer hidden" id="tocDrawer" aria-label="经书目录大纲">
+      <div class="toc-header">
+        <strong>经书大纲目录</strong>
+        <button class="close-toc" id="closeTocBtn" type="button" aria-label="关闭目录">✕</button>
+      </div>
+      <div class="toc-list" id="tocList">
+        <div class="toc-empty">正在解析经文目录...</div>
+      </div>
+    </aside>
+    <div class="toc-backdrop hidden" id="tocBackdrop"></div>
+
+    <!-- 记忆上次阅读进度气泡提示 -->
+    <div class="resume-toast hidden" id="resumeToast">
+      <span>上次读到第 <strong id="resumePageNum">1</strong> 页</span>
+      <div class="resume-actions">
+        <button id="resumeGoBtn" type="button">继续阅读</button>
+        <button id="resumeDismissBtn" type="button">✕</button>
+      </div>
+    </div>
+
     <main class="reader-main">
       <section class="book-reader" id="bookReader" aria-label="翻页 PDF 阅读器">
         <button class="page-turn page-turn-prev" id="prevPage" type="button" aria-label="上一页">‹</button>
@@ -19,10 +54,11 @@
           <div class="book-shadow" aria-hidden="true"></div>
           <canvas class="book-page current-page" id="pageCanvas" aria-label="当前 PDF 页面"></canvas>
           <canvas class="book-page next-page" id="nextCanvas" aria-hidden="true"></canvas>
-          <div class="page-loading" id="pageLoading">正在加载 PDF...</div>
+          <div class="page-loading" id="pageLoading">正在加载经书...</div>
         </div>
         <button class="page-turn page-turn-next" id="nextPage" type="button" aria-label="下一页">›</button>
       </section>
+
       <div class="reader-controls">
         <button id="firstPage" type="button">首页</button>
         <span class="page-indicator"><strong id="pageNumber">0</strong> / <span id="pageCount">0</span></span>
@@ -32,8 +68,10 @@
         <button id="zoomIn" type="button" aria-label="放大">＋</button>
         <button id="lastPage" type="button">末页</button>
       </div>
+
       <div class="reader-empty" id="readerEmpty">未找到 PDF 文件</div>
     </main>
+
     <script src="/vendor/pdfjs/pdf.min.js"></script>
     <script src="/reader.js"></script>
   </body>

@@ -26,6 +26,9 @@
           <div class="header-actions">
             <a href="/" target="_blank">查看前台</a>
             <a href="/library-admin.html" target="_blank">资料库编辑</a>
+            <button class="ghost" id="exportDataBtn" type="button" title="备份全站配置与留言数据">📥 备份数据</button>
+            <button class="ghost" id="importDataBtn" type="button" title="导入 JSON 文件恢复数据">📤 恢复数据</button>
+            <input type="file" id="importFileInput" accept=".json,application/json" class="hidden-file-input">
             <button class="ghost" id="checkUpdateBtn" type="button">检查更新</button>
             <button id="saveBtn">保存全部</button>
             <button class="ghost" id="logoutBtn">退出</button>
@@ -111,6 +114,7 @@
                   <th>称呼</th>
                   <th>留言</th>
                   <th>回复</th>
+                  <th>前台展示</th>
                   <th>时间</th>
                   <th>操作</th>
                 </tr>

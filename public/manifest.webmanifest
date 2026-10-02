@@ -1,0 +1,16 @@
+{
+  "name": "佛学文化资料阅览",
+  "short_name": "佛学资料",
+  "description": "经典经文、电子书籍与佛学文化学习资料浏览与管理站点",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fcf8f2",
+  "theme_color": "#8d3a2a",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

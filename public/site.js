@@ -13,6 +13,8 @@ const iconSvg = {
 
 const $ = (selector) => document.querySelector(selector);
 
+let globalSiteData = null;
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -25,9 +27,14 @@ function escapeHtml(value) {
 function sanitizeUrl(url) {
   const u = String(url || "").trim();
   if (!u || u === "#") return "";
-  // 严格只允许以 http://, https://, / 开头的安全链接，阻止 javascript: 等伪协议
   if (/^(?:https?:\/\/|\/)/i.test(u)) return u;
   return "";
+}
+
+function isAudioItem(item) {
+  const url = String(item.readUrl || item.downloadUrl || "").toLowerCase();
+  const type = String(item.type || "").toLowerCase();
+  return type === "mp3" || type === "audio" || /\.mp3(?:$|\?)/i.test(url);
 }
 
 function metaText(item) {
@@ -47,18 +54,37 @@ function readerUrl(item) {
   return `/reader.html?${params.toString()}`;
 }
 
+function dedupeDownloads(list) {
+  const seen = new Set();
+  return (list || []).filter((item) => {
+    const key = `${item.title}-${item.downloadUrl}-${item.size}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function actionLinks(item, textMode = false) {
   const readUrl = readerUrl(item);
   const downUrl = sanitizeUrl(item.downloadUrl);
+  const isAudio = isAudioItem(item);
+  const audioUrl = sanitizeUrl(item.readUrl || item.downloadUrl);
+
+  const audioBtn = isAudio && audioUrl ? `<button class="action-btn listen-btn" type="button" onclick="playAudio('${escapeHtml(audioUrl)}', '${escapeHtml(item.title)}')">🎵 诵听</button>` : "";
+
   if (textMode) {
     return `
-      ${readUrl ? `<a class="read-text" href="${escapeHtml(readUrl)}">阅读</a>` : ""}
-      ${downUrl ? `<a class="down-text" href="${escapeHtml(downUrl)}" download>下载</a>` : ""}
+      <div class="row-actions-group">
+        ${audioBtn}
+        ${readUrl ? `<a class="action-btn read-pill" href="${escapeHtml(readUrl)}">阅读</a>` : ""}
+        ${downUrl ? `<a class="action-btn down-pill" href="${escapeHtml(downUrl)}" download>下载</a>` : ""}
+      </div>
     `;
   }
   return `
     <div class="actions">
-      ${readUrl ? `<a href="${escapeHtml(readUrl)}">▣ 在线阅读</a>` : ""}
+      ${audioBtn}
+      ${readUrl ? `<a class="action-pill" href="${escapeHtml(readUrl)}">▣ 在线阅读</a>` : ""}
     </div>
   `;
 }
@@ -68,8 +94,8 @@ function resourceCard(item) {
   return `
     <article class="resource-card">
       <div class="mark">${icon}</div>
-      <div>
-        <h3>${escapeHtml(item.title)}</h3>
+      <div class="card-body">
+        <h3 title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
         <p class="meta">${metaText(item)}</p>
         ${actionLinks(item)}
       </div>
@@ -82,8 +108,8 @@ function smallItem(item) {
   return `
     <article class="small-item">
       <div class="mark">${icon}</div>
-      <div>
-        <h3>${escapeHtml(item.title)}</h3>
+      <div class="item-body">
+        <h3 title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3>
         <p class="meta">${metaText(item)}</p>
         ${actionLinks(item)}
       </div>
@@ -92,21 +118,36 @@ function smallItem(item) {
 }
 
 function bookRow(item, index, textMode = false) {
+  const title = escapeHtml(item.title);
   if (textMode) {
     return `
       <div class="book-row">
         <span class="num">${index + 1}.</span>
-        <span>${escapeHtml(item.title)}</span>
+        <span class="book-title" title="${title}">${title}</span>
         ${actionLinks(item, true)}
       </div>
     `;
   }
   const readUrl = readerUrl(item);
+  const isAudio = isAudioItem(item);
+  const audioUrl = sanitizeUrl(item.readUrl || item.downloadUrl);
+
+  let op = `<span class="file-type">${escapeHtml(item.type || "PDF")}</span>`;
+  if (isAudio && audioUrl) {
+    op = `<button class="action-btn listen-pill" type="button" onclick="playAudio('${escapeHtml(audioUrl)}', '${title}')">🎵 诵听</button>`;
+  } else if (readUrl) {
+    op = `<a class="action-btn read-pill" href="${escapeHtml(readUrl)}">在线阅读</a>`;
+  }
+
   return `
     <div class="book-row">
-      <span class="num">${index + 1}</span>
-      <span>${escapeHtml(item.title)}</span>
-      ${readUrl ? `<a class="read-text" href="${escapeHtml(readUrl)}">在线阅读</a>` : `<span class="file-type">${escapeHtml(item.type || "PDF")}</span>`}
+      <div class="book-left">
+        <span class="num">${index + 1}</span>
+        <span class="book-title" title="${title}">${title}</span>
+      </div>
+      <div class="book-right">
+        ${op}
+      </div>
     </div>
   `;
 }
@@ -114,23 +155,36 @@ function bookRow(item, index, textMode = false) {
 function downloadRow(item, compact = false) {
   const kind = (item.type || "PDF").toLowerCase();
   const downUrl = sanitizeUrl(item.downloadUrl);
+  const title = escapeHtml(item.title);
+  const isAudio = isAudioItem(item);
+
   if (compact) {
     const readUrl = readerUrl(item);
+    const audioBtn = isAudio && downUrl ? `<button class="action-btn listen-btn" type="button" onclick="playAudio('${escapeHtml(downUrl)}', '${title}')">🎵</button>` : "";
     return `
       <div class="archive-row">
-        <span></span>
-        <span>${escapeHtml(item.title)}</span>
-        ${readUrl ? `<a class="read-text" href="${escapeHtml(readUrl)}">阅读</a>` : "<span></span>"}
-        ${downUrl ? `<a class="down-text" href="${escapeHtml(downUrl)}" download>下载</a>` : "<span></span>"}
+        <span class="archive-icon">📦</span>
+        <span class="archive-title" title="${title}">${title}</span>
+        <div class="archive-actions">
+          ${audioBtn}
+          ${readUrl ? `<a class="action-btn read-pill" href="${escapeHtml(readUrl)}">阅读</a>` : ""}
+          ${downUrl ? `<a class="action-btn down-pill" href="${escapeHtml(downUrl)}" download>下载</a>` : ""}
+        </div>
       </div>
     `;
   }
+
+  const audioBtn = isAudio && downUrl ? `<button class="action-btn listen-pill" type="button" onclick="playAudio('${escapeHtml(downUrl)}', '${title}')">🎵 播放</button>` : "";
+
   return `
     <div class="download-row">
       <span class="file-icon ${escapeHtml(kind)}">${escapeHtml((item.type || "PDF").slice(0, 4))}</span>
-      <span>${escapeHtml(item.title)}</span>
-      <span class="file-type">${escapeHtml(item.type || "PDF")} · ${escapeHtml(item.size || "")}</span>
-      ${downUrl ? `<a class="download-action" href="${escapeHtml(downUrl)}" download>↓ 下载</a>` : `<span class="download-action disabled">无文件</span>`}
+      <span class="download-title" title="${title}">${title}</span>
+      <span class="file-type">${escapeHtml(item.type || "PDF")}${item.size ? ` · ${escapeHtml(item.size)}` : ""}</span>
+      <div class="download-right">
+        ${audioBtn}
+        ${downUrl ? `<a class="download-action" href="${escapeHtml(downUrl)}" download>↓ 下载</a>` : `<span class="download-action disabled">无文件</span>`}
+      </div>
     </div>
   `;
 }
@@ -154,7 +208,9 @@ async function loadData() {
   try {
     const response = await fetch("/api/data");
     if (!response.ok) throw new Error("加载数据失败");
-    return await response.json();
+    const data = await response.json();
+    globalSiteData = data;
+    return data;
   } catch (err) {
     console.error("加载数据异常:", err);
     return {
@@ -172,10 +228,27 @@ function renderHome(data) {
   const settings = data.settings || {};
   if ($("#siteTitle")) $("#siteTitle").textContent = settings.title || "佛学文化资料阅览";
   if ($("#siteSubtitle")) $("#siteSubtitle").textContent = settings.subtitle || "";
+
+  // 渲染平台说明 / 修学寄语
+  const noticeBanner = $("#noticeBanner");
+  const noticeText = $("#siteNoticeText");
+  if (noticeBanner && noticeText) {
+    const notice = String(settings.notice || "").trim();
+    if (notice) {
+      noticeText.textContent = notice;
+      noticeBanner.classList.remove("hidden");
+    } else {
+      noticeBanner.classList.add("hidden");
+    }
+  }
+
   if ($("#importantGrid")) $("#importantGrid").innerHTML = (data.important || []).map(resourceCard).join("");
   if ($("#smallGrid")) $("#smallGrid").innerHTML = (data.smallMantras || []).slice(0, 5).map(smallItem).join("");
   if ($("#scripturePreview")) $("#scripturePreview").innerHTML = (data.scriptures || []).slice(0, 12).map((item, index) => bookRow(item, index)).join("");
-  if ($("#downloadPreview")) $("#downloadPreview").innerHTML = (data.downloads || []).slice(0, 6).map((item) => downloadRow(item)).join("");
+
+  // 常用下载区去重
+  const dedupedDownloads = dedupeDownloads(data.downloads || []);
+  if ($("#downloadPreview")) $("#downloadPreview").innerHTML = dedupedDownloads.slice(0, 6).map((item) => downloadRow(item)).join("");
   if ($("#messageList")) $("#messageList").innerHTML = (data.messages || []).slice(0, 5).map(messageRow).join("");
 }
 
@@ -186,7 +259,6 @@ function renderScriptures(data) {
   const numColumns = Math.max(1, Math.ceil(totalCount / columnSize));
   const columns = [];
 
-  // 修复经书超过 75 本被截断丢失的 Bug：动态根据经书总量自适应切分列
   for (let i = 0; i < numColumns; i++) {
     columns.push(scriptures.slice(i * columnSize, (i + 1) * columnSize));
   }
@@ -208,7 +280,7 @@ function renderScriptures(data) {
 
   const archiveList = $("#archiveList");
   if (archiveList) {
-    const downloads = Array.isArray(data.downloads) ? data.downloads : [];
+    const downloads = dedupeDownloads(data.downloads || []);
     if (downloads.length === 0) {
       archiveList.innerHTML = `<div style="text-align: center; color: #888; padding: 1.5rem;">暂无下载资料包</div>`;
     } else {
@@ -219,11 +291,164 @@ function renderScriptures(data) {
   }
 }
 
+// ==================== 站内实时搜索功能 ====================
+function handleSearch(keyword) {
+  const term = String(keyword || "").trim().toLowerCase();
+  const clearBtn = $("#clearSearchBtn");
+  const hint = $("#searchResultHint");
+
+  if (clearBtn) clearBtn.classList.toggle("hidden", !term);
+
+  if (!globalSiteData) return;
+
+  if (!term) {
+    if (hint) hint.classList.add("hidden");
+    renderHome(globalSiteData);
+    return;
+  }
+
+  const filterFn = (item) => {
+    const t = String(item.title || "").toLowerCase();
+    const s = String(item.subtitle || "").toLowerCase();
+    return t.includes(term) || s.includes(term);
+  };
+
+  const filteredImportant = (globalSiteData.important || []).filter(filterFn);
+  const filteredSmall = (globalSiteData.smallMantras || []).filter(filterFn);
+  const filteredScriptures = (globalSiteData.scriptures || []).filter(filterFn);
+  const filteredDownloads = dedupeDownloads(globalSiteData.downloads || []).filter(filterFn);
+
+  const totalMatches = filteredImportant.length + filteredSmall.length + filteredScriptures.length + filteredDownloads.length;
+
+  if (hint) {
+    hint.textContent = `共检索到 ${totalMatches} 项与 “${keyword}” 相关的资料经卷：`;
+    hint.classList.remove("hidden");
+  }
+
+  if ($("#importantGrid")) {
+    $("#importantGrid").innerHTML = filteredImportant.length
+      ? filteredImportant.map(resourceCard).join("")
+      : `<div class="search-empty">无匹配重点经咒</div>`;
+  }
+  if ($("#smallGrid")) {
+    $("#smallGrid").innerHTML = filteredSmall.length
+      ? filteredSmall.map(smallItem).join("")
+      : `<div class="search-empty">无匹配小咒</div>`;
+  }
+  if ($("#scripturePreview")) {
+    $("#scripturePreview").innerHTML = filteredScriptures.length
+      ? filteredScriptures.map((item, index) => bookRow(item, index)).join("")
+      : `<div class="search-empty">无匹配常用经书</div>`;
+  }
+  if ($("#downloadPreview")) {
+    $("#downloadPreview").innerHTML = filteredDownloads.length
+      ? filteredDownloads.map((item) => downloadRow(item)).join("")
+      : `<div class="search-empty">无匹配下载区文件</div>`;
+  }
+}
+
+const searchInput = $("#siteSearchInput");
+if (searchInput) {
+  searchInput.addEventListener("input", (e) => handleSearch(e.target.value));
+}
+
+const clearSearchBtn = $("#clearSearchBtn");
+if (clearSearchBtn) {
+  clearSearchBtn.addEventListener("click", () => {
+    if (searchInput) {
+      searchInput.value = "";
+      searchInput.focus();
+    }
+    handleSearch("");
+  });
+}
+
+// ==================== 全局浮动音频播放器 ====================
+let isAudioLoop = false;
+
+window.playAudio = function(url, title) {
+  const bar = $("#audioPlayerBar");
+  const audio = $("#globalAudio");
+  const titleEl = $("#audioTitle");
+  const playBtn = $("#audioPlayBtn");
+
+  if (!bar || !audio) return;
+
+  bar.classList.remove("hidden");
+  if (titleEl) titleEl.textContent = title || "梵呗诵持";
+
+  if (audio.src !== url && !audio.src.endsWith(url)) {
+    audio.src = url;
+  }
+
+  audio.play().then(() => {
+    if (playBtn) playBtn.textContent = "⏸";
+  }).catch((err) => {
+    console.warn("音频播放失败:", err);
+  });
+};
+
+const audioEl = $("#globalAudio");
+if (audioEl) {
+  const playBtn = $("#audioPlayBtn");
+  const loopBtn = $("#audioLoopBtn");
+  const progress = $("#audioProgress");
+  const timeEl = $("#audioTime");
+  const closeBtn = $("#audioCloseBtn");
+
+  function formatTime(seconds) {
+    if (isNaN(seconds)) return "00:00";
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  }
+
+  playBtn?.addEventListener("click", () => {
+    if (audioEl.paused) {
+      audioEl.play();
+      playBtn.textContent = "⏸";
+    } else {
+      audioEl.pause();
+      playBtn.textContent = "▶";
+    }
+  });
+
+  loopBtn?.addEventListener("click", () => {
+    isAudioLoop = !isAudioLoop;
+    audioEl.loop = isAudioLoop;
+    loopBtn.classList.toggle("active", isAudioLoop);
+  });
+
+  audioEl.addEventListener("timeupdate", () => {
+    if (audioEl.duration && progress) {
+      progress.value = Math.floor((audioEl.currentTime / audioEl.duration) * 100);
+      if (timeEl) timeEl.textContent = `${formatTime(audioEl.currentTime)} / ${formatTime(audioEl.duration)}`;
+    }
+  });
+
+  progress?.addEventListener("input", (e) => {
+    if (audioEl.duration) {
+      audioEl.currentTime = (Number(e.target.value) / 100) * audioEl.duration;
+    }
+  });
+
+  audioEl.addEventListener("ended", () => {
+    if (!isAudioLoop && playBtn) playBtn.textContent = "▶";
+  });
+
+  closeBtn?.addEventListener("click", () => {
+    audioEl.pause();
+    $("#audioPlayerBar")?.classList.add("hidden");
+  });
+}
+
+// 首次加载数据
 loadData().then((data) => {
   if ($("#importantGrid")) renderHome(data);
   if ($("#scriptureColumns")) renderScriptures(data);
 });
 
+// 留言表单提交
 if ($("#messageForm")) {
   $("#messageForm").addEventListener("submit", async (event) => {
     event.preventDefault();
