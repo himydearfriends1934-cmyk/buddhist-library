@@ -41,6 +41,15 @@ const adminPassword = process.env.ADMIN_PASSWORD;
 if (!adminPassword) {
   throw new Error("请在启动服务前配置环境变量 ADMIN_PASSWORD 或在 .env 文件中设置。");
 }
+// 拒绝示例占位口令：安装脚本复制 .env.example 时若未替换，任何人都能猜中
+const PLACEHOLDER_PASSWORDS = new Set([
+  "replace-with-a-strong-unique-password",
+  "your-secure-password",
+  "change-to-your-secure-password"
+]);
+if (PLACEHOLDER_PASSWORDS.has(adminPassword)) {
+  throw new Error("ADMIN_PASSWORD 仍为示例占位密码（任何人可从公开的 .env.example 猜到），请在 .env 中改为您自己的强密码后再启动。");
+}
 
 const sessions = new Set();
 const loginFailures = new Map(); // IP -> { count, resetTime }
@@ -84,7 +93,13 @@ function send(res, status, body, type = "application/json; charset=utf-8", heade
 }
 
 function getClientIp(req) {
-  return String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+  // 仅当明确运行在可信反向代理之后（TRUST_PROXY=1）时才信任 X-Forwarded-For，
+  // 否则攻击者可随意伪造该请求头绕过登录锁定与留言限流
+  if (process.env.TRUST_PROXY === "1" || process.env.TRUST_PROXY === "true") {
+    const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+    if (forwarded) return forwarded;
+  }
+  return String(req.socket.remoteAddress || "");
 }
 
 function safeCompare(a, b) {
@@ -251,7 +266,14 @@ function safeUploadName(name) {
 function handleStatic(req, res) {
   const host = req.headers.host || "localhost";
   const url = new URL(req.url, `http://${host}`);
-  const requestPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  let requestPath;
+  try {
+    requestPath = decodeURIComponent(url.pathname === "/" ? "/index.html" : url.pathname);
+  } catch (err) {
+    // 畸形百分号编码（如 /%E0%A4%A）会让 decodeURIComponent 抛 URIError，
+    // 未捕获将导致整个进程退出，单请求即可打崩全站
+    return send(res, 400, "Bad Request", "text/plain; charset=utf-8");
+  }
   const filePath = path.normalize(path.join(publicDir, requestPath));
   
   if (!filePath.startsWith(publicDir)) {
@@ -340,12 +362,18 @@ async function handleApi(req, res) {
   }
 
   if (req.method === "POST" && url.pathname === "/api/login") {
-    // 登录暴力破解防护
-    const failureRecord = loginFailures.get(clientIp);
+    // 登录暴力破解防护：10 分钟窗口内失败 5 次锁定 5 分钟；
+    // 锁定截止时间在触发时固定，后续失败不得顺延，避免攻击者持续刷新
+    // 锁定让真正的管理员永远无法登录（对管理员的拒绝服务）
     const now = Date.now();
-    if (failureRecord && failureRecord.count >= 5 && now < failureRecord.resetTime) {
-      const waitMin = Math.ceil((failureRecord.resetTime - now) / 60000);
-      return send(res, 429, JSON.stringify({ ok: false, message: `登录尝试次数过多，请 ${waitMin} 分钟后再试` }));
+    let failureRecord = loginFailures.get(clientIp);
+    if (failureRecord && failureRecord.lockedUntil) {
+      if (now < failureRecord.lockedUntil) {
+        const waitMin = Math.ceil((failureRecord.lockedUntil - now) / 60000);
+        return send(res, 429, JSON.stringify({ ok: false, message: `登录尝试次数过多，请 ${waitMin} 分钟后再试` }));
+      }
+      loginFailures.delete(clientIp); // 锁定期已过，重新计数
+      failureRecord = undefined;
     }
 
     const body = await readJsonBody(req);
@@ -361,11 +389,14 @@ async function handleApi(req, res) {
       });
     }
 
-    const currentCount = failureRecord && now < failureRecord.resetTime ? failureRecord.count + 1 : 1;
-    loginFailures.set(clientIp, {
-      count: currentCount,
-      resetTime: now + 5 * 60 * 1000 // 锁定 5 分钟
-    });
+    if (!failureRecord || now >= failureRecord.windowEnd) {
+      failureRecord = { count: 0, windowEnd: now + 10 * 60 * 1000, lockedUntil: 0 };
+    }
+    failureRecord.count += 1;
+    if (failureRecord.count >= 5 && !failureRecord.lockedUntil) {
+      failureRecord.lockedUntil = now + 5 * 60 * 1000; // 触发即固定，不再顺延
+    }
+    loginFailures.set(clientIp, failureRecord);
 
     return send(res, 401, JSON.stringify({ ok: false, message: "账号或密码错误" }));
   }

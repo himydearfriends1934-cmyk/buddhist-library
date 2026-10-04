@@ -98,7 +98,7 @@
 1. 在项目根目录创建或编辑 `.env` 文件：
    ```env
    ADMIN_USER=admin
-   ADMIN_PASSWORD=your-secure-password
+   ADMIN_PASSWORD=请填入你自己的强口令（勿用示例占位文本，服务会拒绝启动）
    PORT=4173
    ```
 2. 启动服务：

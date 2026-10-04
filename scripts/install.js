@@ -82,16 +82,25 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// 初始化 .env 配置文件
+// 初始化 .env 配置文件：管理员口令自动生成随机强口令，绝不沿用示例占位值
 if (!fs.existsSync(envFile)) {
+  const crypto = require("crypto");
+  const generatedPassword = crypto.randomBytes(18).toString("base64").replace(/[+/=]/g, "").slice(0, 24);
   if (fs.existsSync(envExample)) {
-    fs.copyFileSync(envExample, envFile);
-    console.log("✓ 已从 .env.example 生成初始配置文件 .env");
+    const example = fs.readFileSync(envExample, "utf8");
+    const replaced = example.replace(/^ADMIN_PASSWORD=.*$/m, `ADMIN_PASSWORD=${generatedPassword}`);
+    fs.writeFileSync(envFile, replaced.includes("ADMIN_PASSWORD=")
+      ? replaced
+      : `${replaced.trimEnd()}\nADMIN_PASSWORD=${generatedPassword}\n`, "utf8");
+    console.log("✓ 已从 .env.example 生成初始配置文件 .env（口令已随机生成）");
   } else {
-    fs.writeFileSync(envFile, "ADMIN_USER=admin\nADMIN_PASSWORD=change-to-your-secure-password\nPORT=4173\n", "utf8");
-    console.log("✓ 生成默认 .env 配置文件");
+    fs.writeFileSync(envFile, `ADMIN_USER=admin\nADMIN_PASSWORD=${generatedPassword}\nPORT=4173\n`, "utf8");
+    console.log("✓ 生成默认 .env 配置文件（口令已随机生成）");
   }
-  console.log("👉 提示：请打开 .env 文件，修改 ADMIN_PASSWORD 为您自己的管理员安全密码。");
+  console.log("=================================================");
+  console.log(`🔑 您的管理员口令（已写入 .env，请妥善保存）: ${generatedPassword}`);
+  console.log("   登录后台后如需修改，请直接编辑 .env 中的 ADMIN_PASSWORD 并重启服务。");
+  console.log("=================================================");
 } else {
   console.log("✓ 配置文件 .env 已存在，保留现有配置。");
 }
