@@ -40,6 +40,24 @@
         <div class="search-result-hint hidden" id="searchResultHint"></div>
       </section>
 
+      <!-- 继续阅读：聚合本机阅读进度（无进度时整块隐藏） -->
+      <section class="panel hidden" id="continueSection">
+        <div class="section-title">
+          <span class="lotus-mini">莲</span>
+          <h2>继续阅读</h2>
+        </div>
+        <div class="resume-grid" id="resumeGrid"></div>
+      </section>
+
+      <!-- 精选推荐：聚合各集合 featured 条目（无精选时整块隐藏） -->
+      <section class="panel hidden" id="featuredSection">
+        <div class="section-title">
+          <span class="lotus-mini">莲</span>
+          <h2>精选推荐</h2>
+        </div>
+        <div class="featured-strip" id="featuredStrip"></div>
+      </section>
+
       <section class="panel" id="importantSection">
         <div class="section-title">
           <span class="lotus-mini">莲</span>
@@ -54,6 +72,16 @@
           <h2>小咒</h2>
         </div>
         <div class="small-grid" id="smallGrid"></div>
+      </section>
+
+      <!-- 梵呗诵听：聚合全站音频条目（无音频时整块隐藏） -->
+      <section class="panel hidden" id="audioSection">
+        <div class="section-title">
+          <span class="lotus-mini">莲</span>
+          <h2>梵呗诵听</h2>
+        </div>
+        <p class="audio-zone-hint">点播放即可边看经边听诵，播放器支持单曲循环跟诵。</p>
+        <div class="audio-list" id="audioList"></div>
       </section>
 
       <section class="two-columns">
@@ -74,6 +102,40 @@
           </div>
           <div class="download-list" id="downloadPreview"></div>
         </article>
+      </section>
+
+      <!-- 诵经室能力展示（静态卖点条） -->
+      <section class="feature-strip" aria-label="本站阅读能力">
+        <div class="feature-item">
+          <span class="feature-icon" aria-hidden="true">🔖</span>
+          <strong>进度记忆</strong>
+          <p>每本经读到哪自动记住，下次打开接着读</p>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon" aria-hidden="true">🌗</span>
+          <strong>三色护眼</strong>
+          <p>纯白、羊皮纸黄、夜读黑底金字，随光线切换</p>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon" aria-hidden="true">📖</span>
+          <strong>目录大纲</strong>
+          <p>自动解析经书目录，点哪一章跳哪一页</p>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon" aria-hidden="true">⛶</span>
+          <strong>全屏沉浸</strong>
+          <p>一键全屏，心无旁骛专心诵经</p>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon" aria-hidden="true">📴</span>
+          <strong>离线可读</strong>
+          <p>阅读器本地内置，断网照样打开经书</p>
+        </div>
+        <div class="feature-item">
+          <span class="feature-icon" aria-hidden="true">🎵</span>
+          <strong>诵听跟读</strong>
+          <p>梵呗音频边听边跟诵，可单曲循环</p>
+        </div>
       </section>
 
       <section class="panel message-panel">

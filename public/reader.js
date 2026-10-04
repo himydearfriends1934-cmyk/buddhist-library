@@ -69,10 +69,15 @@ function updateControls() {
   fitPageButton.disabled = textMode;
   fitPageButton.classList.toggle("active", fitMode && !textMode);
 
-  // 保存当前阅读进度
+  // 保存当前阅读进度（首页「继续阅读」据此聚合：页码、总页数、最近阅读时间）
   if (safeFile && currentPage > 0) {
     try {
-      localStorage.setItem(`buddhist_read_prog_${encodeURIComponent(safeFile)}`, String(currentPage));
+      const encFile = encodeURIComponent(safeFile);
+      localStorage.setItem(`buddhist_read_prog_${encFile}`, String(currentPage));
+      if (pdfDocument?.numPages) {
+        localStorage.setItem(`buddhist_read_total_${encFile}`, String(pdfDocument.numPages));
+        localStorage.setItem(`buddhist_read_at_${encFile}`, String(Date.now()));
+      }
     } catch (e) {}
   }
 }

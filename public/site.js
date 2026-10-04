@@ -204,6 +204,140 @@ function messageRow(item) {
   `;
 }
 
+// ==================== 首页新增板块：继续阅读 / 精选推荐 / 梵呗诵听 ====================
+const PROGRESS_PREFIX = "buddhist_read_prog_";
+
+// 扫描阅读器写入本机的阅读进度（buddhist_read_prog_<文件>），按最近阅读排序
+function collectProgressEntries() {
+  const entries = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(PROGRESS_PREFIX)) continue;
+      let file = "";
+      try { file = decodeURIComponent(key.slice(PROGRESS_PREFIX.length)); } catch (e) { continue; }
+      const page = parseInt(localStorage.getItem(key) || "0", 10);
+      if (!file || !(page > 0)) continue;
+      const enc = encodeURIComponent(file);
+      const total = parseInt(localStorage.getItem(`buddhist_read_total_${enc}`) || "0", 10);
+      const at = parseInt(localStorage.getItem(`buddhist_read_at_${enc}`) || "0", 10);
+      entries.push({ file, page, total: total > 0 ? total : 0, at });
+    }
+  } catch (e) { /* localStorage 不可用（隐私模式等）时静默跳过 */ }
+  entries.sort((a, b) => (b.at || 0) - (a.at || 0) || b.page - a.page);
+  return entries;
+}
+
+function findItemByFile(data, file) {
+  const all = [
+    ...(data.important || []), ...(data.smallMantras || []),
+    ...(data.scriptures || []), ...(data.downloads || [])
+  ];
+  return all.find((item) => sanitizeUrl(item.readUrl || item.downloadUrl) === file) || null;
+}
+
+function resumeCard(entry, item) {
+  const title = item ? item.title : (entry.file.split("/").pop() || "经书");
+  const readHref = (item && readerUrl(item))
+    || `/reader.html?file=${encodeURIComponent(entry.file)}&title=${encodeURIComponent(title)}`;
+  const percent = entry.total ? Math.min(100, Math.round((entry.page / entry.total) * 100)) : 0;
+  const progressText = entry.total
+    ? `读到第 ${entry.page} / ${entry.total} 页 · 已读 ${percent}%`
+    : `上次读到第 ${entry.page} 页`;
+  return `
+    <article class="resource-card resume-card">
+      <div class="mark">${iconSvg[(item && item.icon) || "book"] || iconSvg.book}</div>
+      <div class="card-body">
+        <h3 title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
+        <p class="meta">${progressText}</p>
+        ${entry.total ? `<div class="progress-track"><div class="progress-fill" style="width:${percent}%"></div></div>` : ""}
+        <div class="actions"><a class="action-pill" href="${escapeHtml(readHref)}">▣ 继续阅读</a></div>
+      </div>
+    </article>
+  `;
+}
+
+function renderContinueReading(data) {
+  const section = $("#continueSection");
+  const grid = $("#resumeGrid");
+  if (!section || !grid) return;
+  const entries = collectProgressEntries().slice(0, 4);
+  if (!entries.length) {
+    section.classList.add("hidden");
+    grid.innerHTML = "";
+    return;
+  }
+  grid.innerHTML = entries.map((entry) => resumeCard(entry, findItemByFile(data, entry.file))).join("");
+  section.classList.remove("hidden");
+}
+
+function renderFeatured(data) {
+  const section = $("#featuredSection");
+  const strip = $("#featuredStrip");
+  if (!section || !strip) return;
+  const seen = new Set();
+  const featured = [];
+  for (const list of [data.important, data.scriptures, data.downloads, data.smallMantras]) {
+    for (const item of list || []) {
+      if (!item.featured) continue;
+      const key = `${item.title}|${item.readUrl || item.downloadUrl || ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      featured.push(item);
+    }
+  }
+  if (!featured.length) {
+    section.classList.add("hidden");
+    strip.innerHTML = "";
+    return;
+  }
+  strip.innerHTML = featured.map((item) =>
+    resourceCard(item).replace('class="resource-card"', 'class="resource-card featured-card"')
+  ).join("");
+  section.classList.remove("hidden");
+}
+
+function audioRow(item) {
+  const audioUrl = sanitizeUrl(item.readUrl || item.downloadUrl);
+  const title = escapeHtml(item.title);
+  return `
+    <div class="audio-row">
+      <span class="audio-row-icon" aria-hidden="true">🎵</span>
+      <div class="audio-row-body">
+        <span class="audio-row-title" title="${title}">${title}</span>
+        <span class="audio-row-meta">${metaText(item)}</span>
+      </div>
+      <button class="action-btn listen-pill" type="button" onclick="playAudio('${escapeHtml(audioUrl)}', '${title}')">▶ 播放</button>
+    </div>
+  `;
+}
+
+function renderAudioZone(data) {
+  const section = $("#audioSection");
+  const list = $("#audioList");
+  if (!section || !list) return;
+  const seen = new Set();
+  const audios = [];
+  for (const coll of [data.important, data.smallMantras, data.scriptures, data.downloads]) {
+    for (const item of coll || []) {
+      if (!isAudioItem(item)) continue;
+      const url = sanitizeUrl(item.readUrl || item.downloadUrl);
+      if (!url) continue;
+      const key = `${item.title}|${url}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      audios.push(item);
+    }
+  }
+  if (!audios.length) {
+    section.classList.add("hidden");
+    list.innerHTML = "";
+    return;
+  }
+  list.innerHTML = audios.map(audioRow).join("");
+  section.classList.remove("hidden");
+}
+
 async function loadData() {
   try {
     const response = await fetch("/api/data");
@@ -241,6 +375,11 @@ function renderHome(data) {
       noticeBanner.classList.add("hidden");
     }
   }
+
+  // 新增板块：继续阅读 / 精选推荐 / 梵呗诵听（无内容时各自隐藏）
+  renderContinueReading(data);
+  renderFeatured(data);
+  renderAudioZone(data);
 
   if ($("#importantGrid")) $("#importantGrid").innerHTML = (data.important || []).map(resourceCard).join("");
   if ($("#smallGrid")) $("#smallGrid").innerHTML = (data.smallMantras || []).slice(0, 5).map(smallItem).join("");
@@ -306,6 +445,12 @@ function handleSearch(keyword) {
     renderHome(globalSiteData);
     return;
   }
+
+  // 搜索状态下隐藏继续阅读/精选/梵呗板块，避免展示与关键词无关的聚合内容
+  ["#continueSection", "#featuredSection", "#audioSection"].forEach((sel) => {
+    const el = $(sel);
+    if (el) el.classList.add("hidden");
+  });
 
   const filterFn = (item) => {
     const t = String(item.title || "").toLowerCase();
