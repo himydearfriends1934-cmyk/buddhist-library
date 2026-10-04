@@ -2,7 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
-const { exec } = require("child_process");
+const { exec, spawn } = require("child_process");
 
 const root = __dirname;
 const publicDir = path.join(root, "public");
@@ -335,6 +335,16 @@ async function handleApi(req, res) {
     return send(res, 200, JSON.stringify(publicData));
   }
 
+  // 当前版本（公开，供更新后前端轮询确认服务已带新版本恢复）
+  if (req.method === "GET" && url.pathname === "/api/version") {
+    const head = await runGitCommand('git log -1 --format="%h%x09%ci%x09%s"');
+    if (!head.ok) {
+      return send(res, 200, JSON.stringify({ ok: true, isGit: false, hash: "", subject: "" }));
+    }
+    const [hash, date, subject] = (head.stdout || "").split("\t");
+    return send(res, 200, JSON.stringify({ ok: true, isGit: true, hash, date, subject }));
+  }
+
   if (req.method === "POST" && url.pathname === "/api/messages") {
     // 防刷限流：单 IP 10 秒内限 1 条
     const now = Date.now();
@@ -539,7 +549,7 @@ async function handleApi(req, res) {
     return send(res, 200, JSON.stringify({ ok: true, message: "数据还原成功！", data: next }));
   }
 
-  // 检查版本更新接口
+  // 检查版本更新接口：返回当前/最新版本结构化信息与逐条变更清单
   if (req.method === "GET" && url.pathname === "/api/admin/check-update") {
     const headResult = await runGitCommand('git log -1 --format="%h%x09%ci%x09%s"');
     if (!headResult.ok) {
@@ -551,6 +561,7 @@ async function handleApi(req, res) {
     }
 
     const [currentHash, commitDate, commitSubject] = (headResult.stdout || "").split("\t");
+    const current = { hash: currentHash, date: commitDate, subject: commitSubject };
 
     const fetchResult = await runGitCommand("git fetch origin main");
     if (!fetchResult.ok) {
@@ -558,28 +569,61 @@ async function handleApi(req, res) {
         ok: true,
         isGit: true,
         hasUpdate: false,
-        current: { hash: currentHash, date: commitDate, subject: commitSubject },
+        current,
         warning: "远程分支连接受限，暂无法比对远端版本",
         message: `当前版本：${currentHash} (${commitSubject || "最新"})`
       }));
     }
 
-    const diffResult = await runGitCommand("git log HEAD..origin/main --oneline");
-    const hasUpdate = Boolean(diffResult.stdout);
-    const updates = hasUpdate ? diffResult.stdout.split("\n").filter(Boolean) : [];
+    const remoteHead = await runGitCommand('git log -1 origin/main --format="%h%x09%ci%x09%s"');
+    const [latestHash, latestDate, latestSubject] = (remoteHead.stdout || "").split("\t");
+    const latest = { hash: latestHash, date: latestDate, subject: latestSubject };
+
+    // 逐条变更清单（哈希 + 时间 + 说明），前端据此让管理员明确知道升级内容
+    const logResult = await runGitCommand('git log HEAD..origin/main --format="%h%x09%ci%x09%s"');
+    const updates = (logResult.stdout || "")
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => {
+        const [hash, date, subject] = line.split("\t");
+        return { hash, date, subject };
+      });
+    const hasUpdate = updates.length > 0;
+
+    // 变更文件与是否触及后端（决定更新后是否需要重启服务才生效）
+    let changedFiles = [];
+    let includesBackend = false;
+    if (hasUpdate) {
+      const diffResult = await runGitCommand("git diff --name-only HEAD..origin/main");
+      changedFiles = (diffResult.stdout || "").split("\n").filter(Boolean);
+      includesBackend = changedFiles.some(
+        (f) => f === "server.js" || f === "package.json" || f.startsWith("scripts/")
+      );
+    }
+
+    // 工作区是否有未提交修改（可能与更新冲突，提前提示）
+    const statusResult = await runGitCommand("git status --porcelain");
+    const dirty = Boolean((statusResult.stdout || "").trim());
 
     return send(res, 200, JSON.stringify({
       ok: true,
       isGit: true,
       hasUpdate,
-      current: { hash: currentHash, date: commitDate, subject: commitSubject },
+      current,
+      latest,
       updates,
+      changedFiles,
+      includesBackend,
+      dirty,
       message: hasUpdate ? `检测到 ${updates.length} 个新提交` : "当前已是最新版本"
     }));
   }
 
-  // 执行在线一键更新接口 (git pull origin main)
+  // 执行在线一键更新接口 (git pull origin main)，代码有变化时自动重启使后端生效
   if (req.method === "POST" && url.pathname === "/api/admin/update") {
+    const beforeHead = await runGitCommand('git log -1 --format="%h%x09%ci%x09%s"');
+    const [beforeHash] = (beforeHead.stdout || "").split("\t");
+
     const pullResult = await runGitCommand("git pull origin main");
     if (!pullResult.ok) {
       return send(res, 500, JSON.stringify({
@@ -591,12 +635,36 @@ async function handleApi(req, res) {
     const newHeadResult = await runGitCommand('git log -1 --format="%h%x09%ci%x09%s"');
     const [newHash, newDate, newSubject] = (newHeadResult.stdout || "").split("\t");
 
-    return send(res, 200, JSON.stringify({
+    // 本次实际应用的提交清单（供更新完成弹窗回显）
+    let applied = [];
+    if (beforeHash && newHash && beforeHash !== newHash) {
+      const appliedLog = await runGitCommand(
+        `git log ${beforeHash}..${newHash} --format="%h%x09%ci%x09%s"`);
+      applied = (appliedLog.stdout || "")
+        .split("\n")
+        .filter(Boolean)
+        .map((line) => {
+          const [hash, date, subject] = line.split("\t");
+          return { hash, date, subject };
+        });
+    }
+
+    const changed = Boolean(beforeHash && newHash && beforeHash !== newHash);
+
+    send(res, 200, JSON.stringify({
       ok: true,
-      message: "项目代码已成功更新至最新版本！",
+      message: changed ? "项目代码已成功更新至最新版本！" : "已是最新版本，无代码变化",
       details: pullResult.stdout,
-      current: { hash: newHash, date: newDate, subject: newSubject }
+      current: { hash: newHash, date: newDate, subject: newSubject },
+      applied,
+      restarting: changed
     }));
+
+    // 代码变了才重启：先让响应送达，再拉起新进程接管（会话为内存态，重启后需重新登录）
+    if (changed) {
+      setTimeout(restartSelf, 700);
+    }
+    return;
   }
 
   send(res, 404, JSON.stringify({ ok: false, message: "接口不存在" }));
@@ -616,6 +684,35 @@ function runGitCommand(cmd) {
   });
 }
 
+// 在线更新后的自重启：拉起一个脱离父进程的“重启器”，稍候启动新版 server.js，
+// 然后本进程退出让出端口。新进程带 BUDDHIST_AUTO_RESTART 标记，遇端口未释放会重试监听。
+function restartSelf() {
+  try {
+    const restarterScript = `
+      setTimeout(() => {
+        const { spawn } = require("child_process");
+        const child = spawn(process.execPath, ["server.js"], {
+          cwd: ${JSON.stringify(root)},
+          detached: true,
+          stdio: "ignore",
+          env: { ...process.env, BUDDHIST_AUTO_RESTART: "1" }
+        });
+        child.unref();
+      }, 1200);
+    `;
+    const restarter = spawn(process.execPath, ["-e", restarterScript], {
+      cwd: root,
+      detached: true,
+      stdio: "ignore"
+    });
+    restarter.unref();
+    console.log("在线更新完成，服务即将自动重启以使新版生效...");
+  } catch (err) {
+    console.error("自动重启失败，请手动重启服务:", err);
+  }
+  setTimeout(() => process.exit(0), 200);
+}
+
 const server = http.createServer((req, res) => {
   if (req.url.startsWith("/api/")) {
     handleApi(req, res).catch((error) => {
@@ -629,4 +726,15 @@ const server = http.createServer((req, res) => {
 server.listen(port, () => {
   console.log(`佛学文化资料阅览网站已启动: http://localhost:${port}`);
   console.log(`后台管理员账号: ${adminUser}`);
+});
+
+// 自重启的新进程：旧进程可能尚未完全释放端口，短时重试监听直至接管成功
+let listenRetries = 0;
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE" && process.env.BUDDHIST_AUTO_RESTART === "1" && listenRetries < 15) {
+    listenRetries += 1;
+    setTimeout(() => server.listen(port), 1000);
+    return;
+  }
+  throw err;
 });

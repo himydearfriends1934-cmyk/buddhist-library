@@ -539,101 +539,218 @@ $("#saveBtn").addEventListener("click", async () => {
   showToast("已保存");
 });
 
-// ==================== 页面在线更新功能 ====================
-let updateState = { hasUpdate: false };
+// ==================== 页面在线更新功能（弹窗版） ====================
+let updateInfo = null;   // 最近一次检查更新的结果
+let updateBusy = false;  // 更新/重启进行中时禁止关闭弹窗
 
-async function checkUpdate(autoShow = true) {
-  const card = $("#updateCard");
-  const badge = $("#updateBadge");
-  const title = $("#updateStatusText");
-  const desc = $("#updateVersionInfo");
-  const startBtn = $("#startUpdateBtn");
+function setUpdateModal(bodyHtml, footerHtml, closable = true) {
+  const body = $("#updateModalBody");
+  const footer = $("#updateModalFooter");
+  const closeBtn = $("#updateModalClose");
+  if (body) body.innerHTML = bodyHtml;
+  if (footer) footer.innerHTML = footerHtml;
+  if (closeBtn) closeBtn.disabled = !closable;
+}
 
-  if (!card) return;
+function closeUpdateModal() {
+  if (updateBusy) return; // 更新或重启中不可关闭，避免误以为可离开
+  $("#updateModal")?.classList.add("hidden");
+}
 
-  if (autoShow) {
-    card.classList.remove("hidden");
-    badge.textContent = "检测中";
-    badge.className = "update-badge pending";
-    title.textContent = "正在检查 Git 仓库更新...";
-    desc.textContent = "正在连接远程仓库比对最新提交...";
-    startBtn.disabled = true;
-  }
+function versionLine(v) {
+  if (!v || !v.hash) return "-";
+  return `<code>${escapeHtml(v.hash)}</code> ${escapeHtml(v.subject || "")}`;
+}
+
+function changelogHtml(updates) {
+  if (!updates || !updates.length) return "";
+  const items = updates.map((c) => `
+    <li>
+      <code>${escapeHtml(c.hash || "")}</code>
+      <span class="changelog-subject">${escapeHtml(c.subject || "")}</span>
+      <time>${escapeHtml(String(c.date || "").slice(0, 10))}</time>
+    </li>`).join("");
+  return `<ul class="changelog">${items}</ul>`;
+}
+
+function bindModalButtons() {
+  $("#updateCloseBtn")?.addEventListener("click", closeUpdateModal);
+  $("#updateRetryBtn")?.addEventListener("click", runUpdateCheck);
+  $("#startUpdateBtn")?.addEventListener("click", doOnlineUpdate);
+  $("#updateDoneBtn")?.addEventListener("click", () => location.reload());
+}
+
+async function runUpdateCheck() {
+  updateBusy = false;
+  setUpdateModal(
+    `<p class="update-loading">正在连接远程仓库，比对最新版本...</p>`,
+    `<button class="ghost" id="updateCloseBtn" type="button">关闭</button>`,
+    true
+  );
+  bindModalButtons();
 
   try {
     const res = await request("/api/admin/check-update");
+    updateInfo = res;
+
     if (!res.isGit) {
-      badge.textContent = "独立版";
-      badge.className = "update-badge";
-      title.textContent = res.message || "未检测到 Git 仓库";
-      desc.textContent = "建议从 GitHub 下载最新版本覆盖更新。";
-      startBtn.disabled = true;
+      setUpdateModal(
+        `<p>${escapeHtml(res.message || "未检测到 Git 仓库，无法自动更新。")}</p>
+         <p class="update-note">建议从 GitHub 下载最新版本覆盖更新，或使用一键安装脚本更新。</p>`,
+        `<button class="primary" id="updateCloseBtn" type="button">知道了</button>`,
+        true
+      );
+      bindModalButtons();
       return;
     }
 
-    updateState = res;
-    const currentInfo = res.current ? `当前版本: ${res.current.hash} - ${res.current.subject}` : "";
-
-    if (res.hasUpdate) {
-      badge.textContent = "有更新";
-      badge.className = "update-badge active";
-      title.textContent = `发现新版本（共 ${res.updates.length} 个新提交）`;
-      desc.innerHTML = `${escapeHtml(currentInfo)}<br><span style="color:#b45309;">可点击“立即更新”直接拉取最新代码</span>`;
-      startBtn.disabled = false;
-      card.classList.remove("hidden");
-    } else {
-      badge.textContent = "最新";
-      badge.className = "update-badge success";
-      title.textContent = res.warning || "当前已是最新版本";
-      desc.textContent = currentInfo || "无需更新";
-      startBtn.disabled = true;
-      if (!autoShow) {
-        showToast("已是最新版本");
-      }
+    if (res.warning) {
+      setUpdateModal(
+        `<p>当前版本：${versionLine(res.current)}</p>
+         <p class="update-note">${escapeHtml(res.warning)}，请稍后重试。</p>`,
+        `<button class="ghost" id="updateRetryBtn" type="button">重新检查</button>
+         <button class="primary" id="updateCloseBtn" type="button">关闭</button>`,
+        true
+      );
+      bindModalButtons();
+      return;
     }
+
+    if (!res.hasUpdate) {
+      setUpdateModal(
+        `<p class="update-done">✅ 当前已是最新版本，无需升级。</p>
+         <p>当前版本：${versionLine(res.current)}</p>`,
+        `<button class="primary" id="updateCloseBtn" type="button">关闭</button>`,
+        true
+      );
+      bindModalButtons();
+      return;
+    }
+
+    const notes = [
+      "点击「立即更新」将自动拉取新代码并重启服务（约数秒），重启后登录状态失效，刷新后请重新登录。"
+    ];
+    if (res.includesBackend) {
+      notes.push("本次更新包含后端代码（server.js 等），必须重启后才生效，已包含在自动流程中。");
+    }
+    if (res.dirty) {
+      notes.push("⚠ 检测到服务器本地有未提交的修改，更新可能失败或产生冲突，建议先处理本地修改再更新。");
+    }
+
+    setUpdateModal(
+      `<div class="version-compare">
+         <div><span>当前版本</span>${versionLine(res.current)}</div>
+         <div class="version-arrow">→</div>
+         <div><span>最新版本</span>${versionLine(res.latest)}</div>
+       </div>
+       <p>共 <strong>${res.updates.length}</strong> 个新提交，本次升级内容如下：</p>
+       ${changelogHtml(res.updates)}
+       ${notes.map((n) => `<p class="update-note">${escapeHtml(n)}</p>`).join("")}`,
+      `<button class="ghost" id="updateCloseBtn" type="button">稍后再说</button>
+       <button class="primary" id="startUpdateBtn" type="button">立即更新</button>`,
+      true
+    );
+    bindModalButtons();
   } catch (err) {
-    badge.textContent = "失败";
-    badge.className = "update-badge danger";
-    title.textContent = "检查更新失败";
-    desc.textContent = err.message;
-    startBtn.disabled = true;
+    setUpdateModal(
+      `<p class="update-error">❌ 检查更新失败：${escapeHtml(err.message)}</p>`,
+      `<button class="ghost" id="updateRetryBtn" type="button">重新检查</button>
+       <button class="primary" id="updateCloseBtn" type="button">关闭</button>`,
+      true
+    );
+    bindModalButtons();
   }
+}
+
+// 更新后轮询 /api/version，直到服务带着新版本恢复（重启窗口内请求会失败，属正常）
+async function waitForNewVersion(expectedHash) {
+  for (let i = 0; i < 30; i++) {
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      const v = await request("/api/version");
+      if (v && v.isGit && v.hash && (!expectedHash || v.hash === expectedHash)) return true;
+    } catch (e) { /* 服务重启中，继续等待 */ }
+  }
+  return false;
 }
 
 async function doOnlineUpdate() {
-  const startBtn = $("#startUpdateBtn");
-  const title = $("#updateStatusText");
-  const desc = $("#updateVersionInfo");
-  const badge = $("#updateBadge");
-
-  startBtn.disabled = true;
-  badge.textContent = "更新中";
-  badge.className = "update-badge pending";
-  title.textContent = "正在执行更新 (git pull origin main)...";
-  desc.textContent = "正在拉取代码，请稍候...";
+  if (!updateInfo || !updateInfo.hasUpdate) return;
+  updateBusy = true;
+  setUpdateModal(
+    `<p class="update-loading">正在拉取最新代码并应用更新，请勿关闭本窗口...</p>`,
+    "",
+    false
+  );
 
   try {
     const res = await request("/api/admin/update", { method: "POST", body: "{}" });
-    badge.textContent = "成功";
-    badge.className = "update-badge success";
-    title.textContent = "更新成功！";
-    desc.textContent = `最新版本: ${res.current?.hash || ""} - ${res.current?.subject || ""}。即将自动刷新页面...`;
-    showToast("项目更新成功，即将刷新");
-    setTimeout(() => location.reload(), 2500);
+
+    if (!res.restarting) {
+      updateBusy = false;
+      setUpdateModal(
+        `<p class="update-done">✅ ${escapeHtml(res.message || "更新完成")}</p>
+         <p>当前版本：${versionLine(res.current)}</p>`,
+        `<button class="primary" id="updateDoneBtn" type="button">完成并刷新页面</button>`,
+        true
+      );
+      bindModalButtons();
+      return;
+    }
+
+    setUpdateModal(
+      `<p class="update-loading">代码已更新到 <code>${escapeHtml(res.current?.hash || "")}</code>，服务正在自动重启，等待新版上线...</p>`,
+      "",
+      false
+    );
+
+    const back = await waitForNewVersion(res.current?.hash);
+    updateBusy = false;
+    if (back) {
+      setUpdateModal(
+        `<p class="update-done">✅ 更新完成，服务已重启并运行新版本。</p>
+         <p>新版本：${versionLine(res.current)}</p>
+         ${res.applied && res.applied.length ? `<p>本次应用 ${res.applied.length} 个提交：</p>${changelogHtml(res.applied)}` : ""}
+         <p class="update-note">服务重启后登录状态已失效，刷新页面后请重新登录。</p>`,
+        `<button class="primary" id="updateDoneBtn" type="button">完成并刷新页面</button>`,
+        true
+      );
+    } else {
+      setUpdateModal(
+        `<p class="update-done">代码已更新到 <code>${escapeHtml(res.current?.hash || "")}</code>，但等待服务恢复超时。</p>
+         <p class="update-note">请手动刷新页面确认；若长时间无法访问，请在服务器上重新启动服务（npm start）。</p>`,
+        `<button class="primary" id="updateDoneBtn" type="button">刷新页面</button>`,
+        true
+      );
+    }
+    bindModalButtons();
   } catch (err) {
-    badge.textContent = "失败";
-    badge.className = "update-badge danger";
-    title.textContent = "更新失败";
-    desc.textContent = err.message;
-    startBtn.disabled = false;
-    showToast(`更新失败: ${err.message}`);
+    updateBusy = false;
+    setUpdateModal(
+      `<p class="update-error">❌ 更新失败：${escapeHtml(err.message)}</p>
+       <p class="update-note">常见原因：本地有未提交修改与更新冲突、服务器无法访问 GitHub。可以先在服务器上手动 git pull 查看具体报错。</p>`,
+      `<button class="ghost" id="updateRetryBtn" type="button">重新检查</button>
+       <button class="primary" id="updateCloseBtn" type="button">关闭</button>`,
+      true
+    );
+    bindModalButtons();
   }
 }
 
-$("#checkUpdateBtn")?.addEventListener("click", () => checkUpdate(true));
-$("#startUpdateBtn")?.addEventListener("click", doOnlineUpdate);
-$("#dismissUpdateBtn")?.addEventListener("click", () => {
-  $("#updateCard")?.classList.add("hidden");
+function openUpdateModal() {
+  const modal = $("#updateModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  runUpdateCheck();
+}
+
+$("#checkUpdateBtn")?.addEventListener("click", openUpdateModal);
+$("#updateModalClose")?.addEventListener("click", closeUpdateModal);
+$("#updateModal")?.addEventListener("click", (e) => {
+  if (e.target.id === "updateModal") closeUpdateModal();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeUpdateModal();
 });
 
 // ==================== 数据备份与导入恢复 ====================

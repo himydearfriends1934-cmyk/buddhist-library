@@ -622,3 +622,155 @@ td textarea {
   font-size: 13px;
 }
 
+/* 系统更新弹窗 */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 20, 12, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  padding: 16px;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-dialog {
+  background: #fffdf8;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px 6px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 19px;
+  color: #2c251f;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #647066;
+  padding: 4px 8px;
+}
+
+.modal-close:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.modal-body {
+  padding: 8px 20px 14px;
+  overflow-y: auto;
+  font-size: 14px;
+  color: #3c352d;
+  line-height: 1.65;
+}
+
+.modal-body code {
+  background: #f3ead9;
+  color: #8d3a2a;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 10px 20px 18px;
+}
+
+.version-compare {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #fdf6ea;
+  border: 1px solid #e7d8c5;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.version-compare span {
+  display: block;
+  color: #94a3b8;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.version-arrow {
+  font-size: 18px;
+  color: #8d3a2a;
+}
+
+.changelog {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid #e7d8c5;
+  border-radius: 8px;
+}
+
+.changelog li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding: 7px 10px;
+  border-bottom: 1px solid #f1e7d7;
+  font-size: 13px;
+}
+
+.changelog li:last-child {
+  border-bottom: none;
+}
+
+.changelog-subject {
+  flex: 1;
+}
+
+.changelog time {
+  color: #94a3b8;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.update-loading::before {
+  content: "⏳ ";
+}
+
+.update-done {
+  font-weight: 600;
+  color: #15803d;
+}
+
+.update-error {
+  color: #b91c1c;
+}
+
+.update-note {
+  color: #b45309;
+  font-size: 13px;
+}
+
